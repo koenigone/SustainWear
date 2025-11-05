@@ -4,59 +4,54 @@ const jwt = require("jsonwebtoken");
 const { jwtSecret } = require("../config/jwt");
 const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
+const { validateUserInput, validateTwoFactorInput } = require("../helpers/validations");
 
-// SIGN UP FUNCTION
+// REGISTER FUNCTION
 const Register = async (req, res) => {
   try {
     const { first_name, last_name, email, password, confirmPassword } = req.body;
-    console.log("Register request body:", req.body);
 
-    if (!first_name || !last_name || !email || !password || !confirmPassword) { // check if all fields are filled
-      return res.status(400).json({ errMessage: "All fields are required" });
-    }
+    const validationError = validateUserInput(req.body); // validate requested inputs
+    if (validationError) return res.status(400).json({ errMessage: validationError });
 
-    const emailQuery = "SELECT * FROM user WHERE email = ?"; // make sure email is unique
-    db.get(emailQuery, [email], async (error, row) => {
-      if (error) {
-        console.error("Email check error:", error);
-        return res.status(500).json({ errMessage: "Database error", error });
-      }
+    const emailQuery = "SELECT 1 FROM USER WHERE email = ?";
+
+    db.get(emailQuery, [email], async (dbErr, row) => {
+      if (dbErr) return res.status(500).json({ errMessage: "Database error", error: dbErr.message });
 
       if (row) return res.status(400).json({ errMessage: "Email is already taken" });
 
-      if (password !== confirmPassword) // compare password & confirmPassword
-        return res.status(400).json({ errMessage: "Passwords do not match." });
-
-      // hash password using bcrypt
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const signupDate = new Date().toISOString();
-      const defaultRole = "Donor";  // auto assign new users as donors
+      const hashedPassword = await bcrypt.hash(password, 10);   // hash password
+      const registerDate = new Date().toISOString();            // registerDate
+      const defaultRole = "Donor";                              // default user role
 
       const insertQuery = `
-        INSERT INTO user (first_name, last_name, email, password, role, sign_up_date)
+        INSERT INTO USER (first_name, last_name, email, password, role, sign_up_date)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
 
-      db.run(insertQuery, [first_name, last_name, email, hashedPassword, defaultRole, signupDate],
-        function (err) {
-          if (err) {
-            console.error("Insert error:", err);
-            return res
-              .status(500)
-              .json({ errMessage: "Database error", error: err.message });
+      db.run(insertQuery, [first_name, last_name, email, hashedPassword, defaultRole, registerDate],
+        function (insertErr) {
+          if (insertErr) {
+            return res.status(500).json({
+              errMessage: "Database error while creating user",
+              error: insertErr.message
+            });
           }
-          res
-            .status(201)
-            .json({ message: "Account created successfully as Donor", userId: this.lastID });
+
+          res.status(201).json({
+            message: "Account created successfully as Donor",
+            userId: this.lastID
+          });
         }
       );
     });
   } catch (err) {
-    console.error("Register exception:", err);
-    return res.status(500).json({ errMessage: "Internal server error" });
+    res.status(500).json({ errMessage: "Internal server error" });
   }
 };
 
+// nodemailer for two factors authintication
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -65,38 +60,25 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const twoFactor = {};
+const twoFactor = {}; // temp code stored here
 
 // LOGIN FUNCTION
 const Login = (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) { // make sure fields are filled
-      return res.status(400).json({ errMessage: "All fields are required" });
-    }
+    if (!email || !password) return res.status(400).json({ errMessage: "All fields are required" });
 
     const loginQuery = "SELECT * FROM USER WHERE email = ?";
-    db.get(loginQuery, [email], async (error, user) => {
-      if (error) {
-        return res
-          .status(500)
-          .json({ errMessage: "Database error", error: error.message });
-      }
 
-      if (!user) {
-        return res
-          .status(400)
-          .json({ errMessage: "Account does not exist" });
-      }
+    db.get(loginQuery, [email], async (error, user) => {
+      if (error) return res.status(500).json({ errMessage: "Database error", error: error.message });
+      if (!user) return res.status(400).json({ errMessage: "Account does not exist" });
 
       // compare hashed passwords
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res
-          .status(400)
-          .json({ errMessage: "Invalid email or password" });
-      }
+      if (!isMatch) return res.status(400).json({ errMessage: "Invalid email or password" });
+
 
       // generate two factor code (6 digits)
       const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -113,15 +95,12 @@ const Login = (req, res) => {
         text: `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`,
       });
 
-      console.log(`2FA code for ${user.email}: ${twoFactorCode}`);
-
       res.status(200).json({
         message: "2FA code sent to your email",
         tempToken,
       });
     });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ errMessage: "Internal server error" });
   }
 };
@@ -132,19 +111,14 @@ const VerifyTwoFactors = (req, res) => {
     const { tempToken, code } = req.body;
     const record = twoFactor[tempToken];
 
-    if (!record)
-      return res.status(400).json({ errMessage: "Invalid or expired session" });
-
-    if (Date.now() > record.expires)
-      return res.status(400).json({ errMessage: "Code expired" });
-
-    if (record.twoFactorCode !== code)
-      return res.status(400).json({ errMessage: "Incorrect code" });
+    // validate twofactor code
+    const error = validateTwoFactorInput({ tempToken, code, record });
+    if (error) return res.status(400).json({ errMessage: error });
 
     const getUserQuery = "SELECT * FROM USER WHERE user_id = ?";
+
     db.get(getUserQuery, [record.userId], (err, user) => {
-      if (err || !user)
-        return res.status(500).json({ errMessage: "User not found" });
+      if (err || !user) return res.status(500).json({ errMessage: "User not found" });
 
       jwt.sign(
         {
@@ -156,8 +130,7 @@ const VerifyTwoFactors = (req, res) => {
         jwtSecret,
         { expiresIn: "7d" },
         (err, token) => {
-          if (err)
-            return res.status(500).json({ errMessage: "Token error", error: err });
+          if (err) return res.status(500).json({ errMessage: "Token error", error: err });
 
           // cleanup
           delete twoFactor[tempToken];
@@ -177,7 +150,6 @@ const VerifyTwoFactors = (req, res) => {
       );
     });
   } catch (error) {
-    console.error("Verify Two Factors error:", error);
     return res.status(500).json({ errMessage: "Internal server error" });
   }
 };
@@ -188,15 +160,13 @@ const ResendTwoFactors = (req, res) => {
     const { tempToken } = req.body;
     const record = twoFactor[tempToken];
 
-    if (!record) {
-      return res.status(400).json({ errMessage: "Invalid or expired session" });
-    }
+    if (!record) return res.status(400).json({ errMessage: "Invalid or expired session" });
 
     if (record.lastResend && Date.now() - record.lastResend < 30 * 1000) {
       return res.status(429).json({ errMessage: "Please wait 30 seconds before requesting another code." });
     }
-    record.lastResend = Date.now();
 
+    record.lastResend = Date.now();
 
     // generate a new code and update expiry (5 minutes)
     const newCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -205,10 +175,9 @@ const ResendTwoFactors = (req, res) => {
 
     // lookup user email
     const getUserQuery = "SELECT email FROM USER WHERE user_id = ?";
+
     db.get(getUserQuery, [record.userId], async (err, user) => {
-      if (err || !user) {
-        return res.status(500).json({ errMessage: "User not found" });
-      }
+      if (err || !user) return res.status(500).json({ errMessage: "User not found" });
 
       try {
         await transporter.sendMail({
@@ -218,18 +187,16 @@ const ResendTwoFactors = (req, res) => {
           text: `Your new verification code is ${newCode}. It expires in 5 minutes.`,
         });
 
-        console.log(`Resent 2FA code to ${user.email}: ${newCode}`);
-
         return res.status(200).json({ message: "New code sent successfully" });
+
       } catch (emailErr) {
-        console.error(emailErr);
-        return res
-          .status(500)
-          .json({ errMessage: "Failed to send email", error: emailErr.message });
+        return res.status(500).json({
+          errMessage: "Failed to send email",
+          error: emailErr.message
+        });
       }
     });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ errMessage: "Internal server error" });
   }
 };
@@ -251,7 +218,6 @@ const getProfile = (req, res) => {
       const getProfileQuery = "SELECT * FROM USER WHERE user_id = ?";
       db.get(getProfileQuery, [decoded.id], (err, user) => {
         if (err) {
-          console.error(err);
           return res.status(500).json({ errMessage: "Database error" });
         }
 
@@ -271,7 +237,6 @@ const getProfile = (req, res) => {
       });
     });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ errMessage: "Internal server error" });
   }
 };

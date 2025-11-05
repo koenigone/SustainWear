@@ -4,19 +4,14 @@ const db = require("../config/db");
 const updateUser = (req, res) => {
   const { user_id, role, is_active } = req.body;
 
-  if (role !== "Donor" && role !== "Admin") { // only allow donor and admin roles
-    return res
-      .status(400)
-      .json({ errMessage: "Invalid role. Only Donor or Admin are allowed." });
+  if (role !== "Donor" && role !== "Admin") { // only switch between admin and donor roles
+    return res.status(400).json({ errMessage: "Invalid role. Only Donor or Admin are allowed." });
   }
 
   const query = `UPDATE USER SET role = ?, is_active = ? WHERE user_id = ?`;
-  db.run(query, [role, is_active, user_id], function (err) {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
 
+  db.run(query, [role, is_active, user_id], function (err) {
+    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
     res.status(200).json({ message: "User updated successfully" });
   });
 };
@@ -24,11 +19,9 @@ const updateUser = (req, res) => {
 // GET ALL USERS
 const getAllUsers = (req, res) => {
   const query = `SELECT user_id, first_name, last_name, email, role, is_active FROM USER`;
+  
   db.all(query, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
+    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
     res.status(200).json(rows);
   });
 };
@@ -45,15 +38,14 @@ const createOrganisation = (req, res) => {
 
   // find the manager by email
   const findUserQuery = `SELECT user_id, role FROM USER WHERE email = ?`;
+
   db.get(findUserQuery, [manager_email], (err, user) => {
-    if (err)
-      return res.status(500).json({
+    if (err) return res.status(500).json({
         errMessage: "Database error while finding manager",
         error: err.message,
       });
 
-    if (!user)
-      return res.status(404).json({ errMessage: "No user found with this email" });
+    if (!user) return res.status(404).json({ errMessage: "No user found with this email" });
 
     // promote to Staff if needed (user could already be a staff for another org)
     const updateRoleQuery = `UPDATE USER SET role = 'Staff' WHERE user_id = ? AND role = 'Donor'`;
@@ -61,10 +53,7 @@ const createOrganisation = (req, res) => {
 
     const orgQuery = `INSERT INTO ORGANISATION (name, description) VALUES (?, ?)`;
     db.run(orgQuery, [name, description || null], function (err2) {
-      if (err2)
-        return res
-          .status(500)
-          .json({ errMessage: "Failed to add organisation", error: err2.message });
+      if (err2) return res.status(500).json({ errMessage: "Failed to add organisation", error: err2.message });
 
       const org_id = this.lastID;
 
@@ -73,17 +62,14 @@ const createOrganisation = (req, res) => {
         INSERT INTO ORGANISATION_STAFF (org_id, user_id, role)
         VALUES (?, ?, 'Manager')
       `;
+
       db.run(assignQuery, [org_id, user.user_id], (err3) => {
-        if (err3)
-          return res.status(500).json({
-            errMessage:
-              "Organisation created but manager assignment failed",
+        if (err3) return res.status(500).json({
+            errMessage: "Organisation created but manager assignment failed",
             error: err3.message,
           });
 
-        res
-          .status(201)
-          .json({ message: "Organisation created successfully", org_id });
+        res.status(201).json({ message: "Organisation created successfully", org_id });
       });
     });
   });
@@ -105,10 +91,10 @@ const getOrganisations = (req, res) => {
   `;
 
   db.all(query, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
+    if (err) return res.status(500).json({ 
+      errMessage: "Database error",
+      error: err.message
+    });
     res.status(200).json(rows);
   });
 };
@@ -120,8 +106,7 @@ const updateOrganisation = (req, res) => {
 
   const query = `UPDATE ORGANISATION SET name = ?, description = ? WHERE org_id = ?`;
   db.run(query, [name, description, id], function (err) {
-    if (err)
-      return res.status(500).json({ errMessage: "Failed to update organisation", error: err.message });
+    if (err) return res.status(500).json({ errMessage: "Failed to update organisation", error: err.message });
     res.status(200).json({ message: "Organisation updated successfully" });
   });
 };
@@ -134,8 +119,7 @@ const deleteOrganisation = (req, res) => {
     db.run(`DELETE FROM ORGANISATION_STAFF WHERE org_id = ?`, [id]);
     db.run(`DELETE FROM INVENTORY WHERE org_id = ?`, [id]);
     db.run(`DELETE FROM ORGANISATION WHERE org_id = ?`, [id], function (err) {
-      if (err)
-        return res.status(500).json({ errMessage: "Failed to delete organisation", error: err.message });
+      if (err) return res.status(500).json({ errMessage: "Failed to delete organisation", error: err.message });
       res.status(200).json({ message: "Organisation deleted successfully" });
     });
   });
