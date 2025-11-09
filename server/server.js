@@ -6,6 +6,7 @@ const path = require("path");
 const { verifyToken, verifyAdmin } = require("./middlewares/middlewares");
 const app = express();
 
+// CORS configuration for development and production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? true
@@ -20,12 +21,10 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
 // routes
-app.use("/api", require("./routes/userRoutes"));
-app.use("/api/admin", verifyToken, verifyAdmin, require("./routes/adminRoutes"));
-app.use("/api/donor", require("./routes/donorRoutes"));
-// add routes here using same format
-// add routes here using same format
-// add routes here using same format
+app.use("/api", require("./routes/userRoutes"));        // authentication routes
+app.use("/api/donor", require("./routes/donorRoutes")); // donor specific routes
+app.use("/api/org", require("./routes/orgRoutes"));     // organisation specific routes
+app.use("/api/admin", verifyToken, verifyAdmin, require("./routes/adminRoutes")); // admin specific routes
 
 // serve frontend build in production
 if (process.env.NODE_ENV === 'production') {

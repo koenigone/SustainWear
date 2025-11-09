@@ -51,7 +51,7 @@ export default function AdminLog() {
               </Td>
             </Tr>
           ) : (
-            logs.map((log) => {// determine which target (user or org) to display
+            logs.map((log) => { // determine which target (user or org) to display
               const targetName =
                 log.target_user_name !== "—"
                   ? log.target_user_name
