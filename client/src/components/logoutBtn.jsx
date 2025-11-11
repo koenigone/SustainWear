@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
 import toast from "react-hot-toast";
 import api from "../api/axiosClient";
+import ConfirmationModal from "./confirmationModal";
 
 export default function LogoutBtn() {
   const { logout } = useAuth();
@@ -21,15 +22,17 @@ export default function LogoutBtn() {
   };
 
   return (
-    <Button
-      ml={4}
-      colorScheme="red"
-      size="sm"
-      variant="solid"
-      _hover={{ bg: "red.500" }}
-      onClick={handleLogout}
-    >
-      Logout
-    </Button>
+    <ConfirmationModal title="Logout" message="Are you sure you want to log out?" confirmText="Logout" closeText="Return">
+      <Button
+        ml={4}
+        colorScheme="red"
+        size="sm"
+        variant="solid"
+        _hover={{ bg: "red.500" }}
+        onClick={handleLogout}
+      >
+        Logout
+      </Button>
+    </ConfirmationModal>
   );
 }
