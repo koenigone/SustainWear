@@ -188,7 +188,8 @@ export default function ManageOrganisations() {
             filteredOrgs.map((org) => (
               <Tr key={org.org_id}>
                 <Td>{org.name}</Td>
-                <Td>{org.description}</Td>
+                <Td maxW="300px" whiteSpace="normal" wordBreak="break-word">{org.description}</Td>
+
                 <Td>
                   {org.street_name}, {org.post_code}, {org.city}
                 </Td>
