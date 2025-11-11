@@ -14,17 +14,11 @@ import {
   Heading,
   HStack,
   Input,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Text,
   useDisclosure,
 } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
+import ConfirmToggleUserModal from "../../../components/modals/confirmToggleUserModal.jsx";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -32,7 +26,8 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [actionType, setActionType] = useState(""); // "deactivate" or "promote"
+  const [actionType, setActionType] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const confirmModal = useDisclosure();
 
   // fetch users
@@ -84,17 +79,49 @@ export default function ManageUsers() {
   };
 
   // confirm action
-  const handleConfirmAction = () => {
-    if (!selectedUser) return;
+  const handleConfirmAction = async () => {
+    setIsProcessing(true);
+    try {
+      const newRole = actionType === "promote" ? "Admin" : selectedUser.role;
+      const newStatus = actionType === "deactivate" ? false : true;
 
-    if (actionType === "deactivate") {
-      handleUpdate(selectedUser.user_id, selectedUser.role, false);
-    } else if (actionType === "promote") {
-      handleUpdate(selectedUser.user_id, "Admin", selectedUser.is_active);
+      await api.put("/admin/users", {
+        user_id: selectedUser.user_id,
+        role: newRole,
+        is_active: newStatus,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === selectedUser.user_id
+            ? { ...u, role: newRole, is_active: newStatus }
+            : u
+        )
+      );
+
+      setFilteredUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === selectedUser.user_id
+            ? { ...u, role: newRole, is_active: newStatus }
+            : u
+        )
+      );
+
+      toast.success(
+        actionType === "promote"
+          ? "User promoted to Admin successfully"
+          : newStatus
+            ? "User activated successfully"
+            : "User deactivated successfully"
+      );
+
+      confirmModal.onClose();
+    } catch (err) {
+      const msg = err.response?.data?.errMessage || "Failed to update user";
+      toast.error(msg);
+    } finally {
+      setIsProcessing(false);
     }
-
-    confirmModal.onClose();
-    setSelectedUser(null);
   };
 
   if (loading) return <Spinner size="xl" />;
@@ -208,39 +235,16 @@ export default function ManageUsers() {
         </Tbody>
       </Table>
 
-      <Modal isOpen={confirmModal.isOpen} onClose={confirmModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0,0,0,0.4)" />
-        <ModalContent borderRadius="lg" p={4}>
-          <ModalHeader textAlign="center">
-            {actionType === "promote" ? "Confirm Promotion" : "Confirm Deactivation"}
-          </ModalHeader>
-          <ModalBody textAlign="center">
-            <Text mb={2}>
-              {actionType === "promote"
-                ? "Are you sure you want to promote this user to an Admin? They will have full administrative privileges, including managing users and organisations."
-                : "Are you sure you want to deactivate this user? They will no longer be able to log in."}
-            </Text>
-            <Text fontWeight="bold" mt={2}>
-              {selectedUser?.first_name} {selectedUser?.last_name}
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              {selectedUser?.email}
-            </Text>
-          </ModalBody>
-          <ModalFooter justifyContent="center">
-            <Button
-              colorScheme={actionType === "promote" ? "blue" : "red"}
-              mr={3}
-              onClick={handleConfirmAction}
-            >
-              {actionType === "promote" ? "Promote" : "Deactivate"}
-            </Button>
-            <Button variant="outline" onClick={confirmModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {/* CONFIRM TOGGLE USER MODAL */}
+      <ConfirmToggleUserModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.onClose}
+        onConfirm={handleConfirmAction}
+        selectedUser={selectedUser}
+        actionType={actionType}
+        isLoading={isProcessing}
+      />
+
     </Box>
   );
 }

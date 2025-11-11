@@ -10,48 +10,56 @@ import {
   Td,
   Button,
   Input,
-  VStack,
   HStack,
   Heading,
   Spinner,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Text,
 } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
+import AddOrgModal from "../../../components/modals/addOrgModal.jsx";
+import ConfirmToggleOrgModal from "../../../components/modals/confirmToggleOrgModal.jsx";
+import ConfirmOrgDeletionModal from "../../../components/modals/confirmOrgDeletionModal.jsx";
 
 export default function ManageOrganisations() {
   const [orgs, setOrgs] = useState([]);
   const [filteredOrgs, setFilteredOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [newOrg, setNewOrg] = useState({
+  const [orgToDelete, setOrgToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [orgToToggle, setOrgToToggle] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const addModal = useDisclosure();
+  const deleteModal = useDisclosure();
+  const toggleModal = useDisclosure();
+  const initialOrgData = {
     name: "",
     description: "",
     street_name: "",
     post_code: "",
     city: "",
     contact_email: "",
-  });
-  const [orgToDelete, setOrgToDelete] = useState(null);
-  const [orgToToggle, setOrgToToggle] = useState(null);
+  };
+  const [newOrg, setNewOrg] = useState(initialOrgData);
 
-  const addModal = useDisclosure();
-  const deleteModal = useDisclosure();
-  const toggleModal = useDisclosure();
 
-  useEffect(() => { // fetch all orgs
-    api
-      .get("/admin/organisations")
-      .then((res) => setOrgs(res.data))
-      .catch(() => toast.error("Failed to load organisations"))
-      .finally(() => setLoading(false));
+  const fetchOrganisations = async () => { // fench all organisations
+    try {
+      const res = await api.get("/admin/organisations");
+      setOrgs(res.data);
+      setFilteredOrgs(res.data);
+    } catch {
+      toast.error("Failed to load organisations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { // initial fetch
+    fetchOrganisations();
   }, []);
 
   useEffect(() => { // real time search filtering
@@ -75,14 +83,7 @@ export default function ManageOrganisations() {
       const res = await api.get("/admin/organisations");
       setOrgs(res.data);
 
-      setNewOrg({
-        name: "",
-        description: "",
-        street_name: "",
-        post_code: "",
-        city: "",
-        contact_email: "",
-      });
+      setNewOrg(initialOrgData);
     } catch (err) {
       toast.error(err.response?.data?.errMessage || "Failed to create organisation");
     }
@@ -96,6 +97,7 @@ export default function ManageOrganisations() {
 
   const handleToggleActive = async () => {
     if (!orgToToggle) return;
+    setIsProcessing(true);
 
     try {
       await api.put("/admin/organisations/status", {
@@ -108,18 +110,13 @@ export default function ManageOrganisations() {
         } successfully`
       );
 
-      setOrgs((prev) =>
-        prev.map((o) =>
-          o.org_id === orgToToggle.org_id
-            ? { ...o, is_active: !orgToToggle.is_active }
-            : o
-        )
-      );
-
-      toggleModal.onClose();
-      setOrgToToggle(null);
+      await fetchOrganisations();
     } catch {
       toast.error("Failed to update organisation status");
+    } finally {
+      setIsProcessing(false);
+      toggleModal.onClose();
+      setOrgToToggle(null);
     }
   };
 
@@ -131,16 +128,16 @@ export default function ManageOrganisations() {
 
   // delete organisation
   const handleDelete = async () => {
-    if (!orgToDelete) return;
-
+    setIsDeleting(true);
     try {
       await api.delete(`/admin/organisations/${orgToDelete.org_id}`);
-      toast.success(`Organisation "${orgToDelete.name}" deleted`);
-      setOrgs((prev) => prev.filter((o) => o.org_id !== orgToDelete.org_id));
-      deleteModal.onClose();
-      setOrgToDelete(null);
+      toast.success("Organisation deleted successfully");
+      fetchOrganisations(); // refresh table
     } catch {
       toast.error("Failed to delete organisation");
+    } finally {
+      setIsDeleting(false);
+      deleteModal.onClose();
     }
   };
 
@@ -188,7 +185,9 @@ export default function ManageOrganisations() {
             filteredOrgs.map((org) => (
               <Tr key={org.org_id}>
                 <Td>{org.name}</Td>
-                <Td>{org.description}</Td>
+                <Td maxW="300px" whiteSpace="normal" wordBreak="break-word">
+                  {org.description}
+                </Td>
                 <Td>
                   {org.street_name}, {org.post_code}, {org.city}
                 </Td>
@@ -200,20 +199,19 @@ export default function ManageOrganisations() {
                 </Td>
                 <Td>{new Date(org.created_at).toLocaleDateString()}</Td>
                 <Td>
-                  <Flex justify="center" align="center" gap={3}>
+                  <Flex justify="center" align="center" gap={2}>
                     <Button
                       size="sm"
-                      colorScheme={org.is_active ? "yellow" : "green"}
                       w="100px"
+                      colorScheme={org.is_active ? "yellow" : "green"}
                       onClick={() => confirmToggle(org)}
                     >
                       {org.is_active ? "Deactivate" : "Activate"}
                     </Button>
-
                     <Button
                       size="sm"
-                      colorScheme="red"
                       w="100px"
+                      colorScheme="red"
                       onClick={() => confirmDelete(org)}
                     >
                       Delete
@@ -226,163 +224,34 @@ export default function ManageOrganisations() {
         </Tbody>
       </Table>
 
-      <Modal isOpen={addModal.isOpen} onClose={addModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0, 0, 0, 0.4)" />
-        <ModalContent
-          bg="brand.beige"
-          color="brand.green"
-          borderRadius="lg"
-          boxShadow="xl"
-          border="1px solid"
-          borderColor="brand.green"
-        >
-          <ModalHeader
-            textAlign="center"
-            fontWeight="bold"
-            borderBottom="1px solid"
-            borderColor="brand.green"
-          >
-            Add Organisation
-          </ModalHeader>
+      {/* ADD ORGANISATION MODAL */}
+      <AddOrgModal
+        isOpen={addModal.isOpen}
+        onClose={addModal.onClose}
+        onSubmit={handleCreate}
+        orgData={newOrg}
+        setOrgData={setNewOrg}
+      />
 
-          <ModalBody>
-            <VStack spacing={3} mt={3}>
-              <Input
-                placeholder="Organisation Name"
-                value={newOrg.name}
-                onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-              <Input
-                placeholder="Description"
-                value={newOrg.description}
-                onChange={(e) => setNewOrg({ ...newOrg, description: e.target.value })}
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-              <Input
-                placeholder="Street Name"
-                value={newOrg.street_name}
-                onChange={(e) => setNewOrg({ ...newOrg, street_name: e.target.value })}
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-              <Input
-                placeholder="Post Code"
-                value={newOrg.post_code}
-                onChange={(e) => setNewOrg({ ...newOrg, post_code: e.target.value })}
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-              <Input
-                placeholder="City"
-                value={newOrg.city}
-                onChange={(e) => setNewOrg({ ...newOrg, city: e.target.value })}
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-              <Input
-                placeholder="Contact Email"
-                value={newOrg.contact_email}
-                onChange={(e) =>
-                  setNewOrg({ ...newOrg, contact_email: e.target.value })
-                }
-                bg="white"
-                color="black"
-                borderColor="brand.green"
-                focusBorderColor="brand.green"
-              />
-            </VStack>
-          </ModalBody>
+      {/* TOGGLE ORG ACTIVATION MODAL */}
+      <ConfirmToggleOrgModal
+        isOpen={toggleModal.isOpen}
+        onClose={toggleModal.onClose}
+        onConfirm={handleToggleActive}
+        target={orgToToggle}
+        isLoading={isProcessing}
+      />
 
-          <ModalFooter borderTop="1px solid" borderColor="brand.green">
-            <Button
-              bg="brand.green"
-              color="white"
-              _hover={{ bg: "green.600" }}
-              mr={3}
-              onClick={handleCreate}
-            >
-              Save
-            </Button>
-            <Button variant="outline" color="brand.green" onClick={addModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {/* DELETE ORGANISATION MODAL */}
+      <ConfirmOrgDeletionModal
+        isOpen={deleteModal.isOpen}
+        onClose={deleteModal.onClose}
+        onConfirm={handleDelete}
+        target={orgToDelete}
+        entityName="organisation"
+        isLoading={isDeleting}
+      />
 
-      <Modal isOpen={toggleModal.isOpen} onClose={toggleModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0, 0, 0, 0.4)" />
-        <ModalContent bg="white" borderRadius="lg" boxShadow="xl" color="brand.green">
-          <ModalHeader fontWeight="bold" textAlign="center">
-            Confirm {orgToToggle?.is_active ? "Deactivation" : "Activation"}
-          </ModalHeader>
-          <ModalBody textAlign="center" py={5}>
-            <Text mb={2}>
-              Are you sure you want to{" "}
-              <b>{orgToToggle?.is_active ? "deactivate" : "activate"}</b>:
-            </Text>
-            <Text fontWeight="bold" color={orgToToggle?.is_active ? "red.600" : "green.600"}>
-              {orgToToggle?.name}
-            </Text>
-            <Text mt={3} fontSize="sm" color="gray.600">
-              {orgToToggle?.is_active
-                ? "This organisation will be hidden from donors and unavailable for donations."
-                : "This organisation will be made visible and active for donors again."}
-            </Text>
-          </ModalBody>
-          <ModalFooter justifyContent="center">
-            <Button
-              colorScheme={orgToToggle?.is_active ? "red" : "green"}
-              mr={3}
-              onClick={handleToggleActive}
-            >
-              {orgToToggle?.is_active ? "Deactivate" : "Activate"}
-            </Button>
-            <Button variant="outline" onClick={toggleModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={deleteModal.isOpen} onClose={deleteModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0, 0, 0, 0.4)" />
-        <ModalContent bg="white" borderRadius="lg" boxShadow="xl" color="brand.green">
-          <ModalHeader fontWeight="bold" textAlign="center">
-            Confirm Deletion
-          </ModalHeader>
-          <ModalBody textAlign="center" py={5}>
-            <Text mb={2}>Are you sure you want to delete:</Text>
-            <Text fontWeight="bold" color="red.600">
-              {orgToDelete?.name}
-            </Text>
-            <Text mt={3} fontSize="sm" color="gray.600">
-              This action cannot be undone.
-            </Text>
-          </ModalBody>
-          <ModalFooter justifyContent="center">
-            <Button colorScheme="red" mr={3} onClick={handleDelete}>
-              Delete
-            </Button>
-            <Button variant="outline" onClick={deleteModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 }

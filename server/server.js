@@ -26,6 +26,14 @@ app.use("/api/donor", require("./routes/donorRoutes")); // donor specific routes
 app.use("/api/org", require("./routes/orgRoutes"));     // organisation specific routes
 app.use("/api/admin", verifyToken, verifyAdmin, require("./routes/adminRoutes")); // admin specific routes
 
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
 // serve frontend build in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));

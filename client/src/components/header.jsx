@@ -44,10 +44,10 @@ export default function Header() {
       boxShadow="base"
     >
       <Flex align="center" gap={3}>
-        <Avatar name={user.name} bg="teal.300" color="black" />
+        <Avatar bg="teal.300" color="black" />
         <Box>
           <Text fontWeight="bold" fontSize="lg">
-            {user.first_name || user.name}
+            {user.first_name}
           </Text>
           <Text fontSize="sm" opacity="60%">
             {user.email}

@@ -7,18 +7,14 @@ import {
   Button,
   Text,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Divider,
 } from "@chakra-ui/react";
 import toast from "react-hot-toast";
 import api from "../api/axiosClient";
 import { useAuth } from "../auth/authContext";
 import { useNavigate } from "react-router-dom";
+import PasswordResetModal from "../components/modals/resetPasswordModal";
+import ConfirmAccountDeletion from "../components/modals/confirmAccountDeletionModal";
 
 export default function Settings() {
   const { user, setUser } = useAuth();
@@ -33,7 +29,6 @@ export default function Settings() {
   });
 
   const [deletePassword, setDeletePassword] = useState("");
-  const [isSendingLink, setIsSendingLink] = useState(false);
 
   // change first/last name
   const handleNameChange = async () => {
@@ -47,20 +42,6 @@ export default function Settings() {
       }));
     } catch (err) {
       toast.error(err.response?.data?.errMessage || "Failed to update name");
-    }
-  };
-
-  // request password change email
-  const handleRequestPasswordChange = async () => {
-    setIsSendingLink(true);
-    try {
-      await api.post("/requestPasswordChange");
-      toast.success("Password change link sent to your email");
-      passwordModal.onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.errMessage || "Failed to send reset link");
-    } finally {
-      setIsSendingLink(false);
     }
   };
 
@@ -184,96 +165,20 @@ export default function Settings() {
       </VStack>
 
       {/* CONFIRM PASSWORD CHANGE MODAL */}
-      <Modal isOpen={passwordModal.isOpen} onClose={passwordModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0, 0, 0, 0.4)" />
-        <ModalContent
-          bg="brand.beige"
-          border="1px solid"
-          borderColor="brand.green"
-          borderRadius="xl"
-          color="brand.green"
-        >
-          <ModalHeader textAlign="center" fontWeight="bold" borderBottom="1px solid" borderColor="brand.green">
-            Change Password
-          </ModalHeader>
-          <ModalBody textAlign="center" py={6}>
-            <Text mb={2}>
-              A password change link will be sent to your email address
-              <b> ({user?.email})</b>.
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              Click “Send Link” to proceed.
-            </Text>
-          </ModalBody>
-          <ModalFooter borderTop="1px solid" borderColor="brand.green" justifyContent="center">
-            <Button
-              bg="brand.green"
-              color="white"
-              _hover={{ bg: "green.700" }}
-              mr={3}
-              onClick={handleRequestPasswordChange}
-              isLoading={isSendingLink}
-            >
-              Send Link
-            </Button>
-            <Button variant="outline" color="brand.green" onClick={passwordModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <PasswordResetModal
+        isOpen={passwordModal.isOpen}
+        onClose={passwordModal.onClose}
+        isAuthenticated={true}
+      />
 
-      {/* ENTER PASSWORD TO CONFIRM MODAL */}
-      <Modal isOpen={deleteModal.isOpen} onClose={deleteModal.onClose} isCentered>
-        <ModalOverlay bg="rgba(0, 0, 0, 0.4)" />
-        <ModalContent
-          bg="brand.beige"
-          border="1px solid"
-          borderColor="brand.green"
-          borderRadius="xl"
-          color="brand.green"
-        >
-          <ModalHeader textAlign="center" fontWeight="bold" borderBottom="1px solid" borderColor="brand.green">
-            Confirm Account Deletion
-          </ModalHeader>
-          <ModalBody textAlign="center" py={6}>
-            <Text mb={3}>Enter your password to confirm account deletion.</Text>
-            <Input
-              type="password"
-              placeholder="Enter Password"
-              bg="white"
-              color="black"
-              borderColor="brand.green"
-              borderWidth="1.5px"
-              borderRadius="md"
-              transition="all 0.2s ease"
-              _placeholder={{ color: "gray.400" }}
-              _hover={{ borderColor: "brand.green" }}
-              _focus={{
-                borderColor: "brand.green",
-                boxShadow: "0 0 0 1px var(--chakra-colors-brand-green)",
-                bg: "white",
-              }}
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-            />
-          </ModalBody>
-          <ModalFooter borderTop="1px solid" borderColor="brand.green" justifyContent="center">
-            <Button
-              bg="red.500"
-              color="white"
-              _hover={{ bg: "red.600" }}
-              mr={3}
-              onClick={handleDeleteAccount}
-            >
-              Delete
-            </Button>
-            <Button variant="outline" color="brand.green" onClick={deleteModal.onClose}>
-              Cancel
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      {/* ENTER PASSWORD TO CONFIRM DELETION MODAL */}
+      <ConfirmAccountDeletion
+        isOpen={deleteModal.isOpen}
+        onClose={deleteModal.onClose}
+        onConfirm={handleDeleteAccount}
+        password={deletePassword}
+        setPassword={setDeletePassword}
+      />
     </Box>
   );
 }

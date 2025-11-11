@@ -5,8 +5,9 @@ const { verifyToken, verifyResetToken } = require("../middlewares/middlewares");
 
 router.post("/register", userController.register);
 router.post("/login", userController.login);
-router.post("/verifyTwoFactors", userController.VerifyTwoFactors);
-router.post("/resendTwoFactors", userController.ResendTwoFactors);
+router.post("/verifyTwoFactors", userController.verifyTwoFactors);
+router.post("/resendTwoFactors", userController.resendTwoFactors);
+router.post("/forgotPassword", userController.forgotPassword);
 router.post("/resetPassword", userController.resetPassword);
 
 // verify temp token for password reset

@@ -4,27 +4,30 @@ import {
   Text,
   Link,
   Button,
+  Flex,
   Input,
   VStack,
   Heading,
   Center,
+  useDisclosure,
 } from "@chakra-ui/react";
 import api from "../../api/axiosClient";
 import toast from "react-hot-toast";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../auth/authContext";
+import PasswordResetModal from "../../components/modals/resetPasswordModal";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const passwordModal = useDisclosure();
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login button clicked");
 
     try {
       const res = await api.post("/login", form);
@@ -84,9 +87,40 @@ export default function Login() {
             <Button type="submit" bg="white" color="brand.green">
               Login
             </Button>
-            <Box>
-              <Text opacity="80%">New user? <Link as={RouterLink} to="/register" textDecor="underline">Register</Link></Text>
-            </Box>
+
+            <Flex
+              direction="column"
+              align="center"
+              justify="center"
+              w="100%"
+              fontSize="sm"
+              gap={2}
+            >
+              <Link
+                opacity="80%"
+                onClick={passwordModal.onOpen}
+                textDecor="underline"
+              >
+                Forgot my password
+              </Link>
+
+              <Link
+                opacity="80%"
+                as={RouterLink}
+                to="/register"
+                textDecor="underline"
+              >
+                Create an Account
+              </Link>
+            </Flex>
+
+            {/* RESET PASSWORD MODAL */}
+            <PasswordResetModal
+              isOpen={passwordModal.isOpen}
+              onClose={passwordModal.onClose}
+              email={form.email}
+              isAuthenticated={false}
+            />
           </VStack>
         </form>
       </Box>

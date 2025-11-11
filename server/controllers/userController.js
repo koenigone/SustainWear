@@ -2,21 +2,24 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { jwtSecret } = require("../config/jwt");
-const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
 const {
-  validateUserInput,
+  validateRegisterInput,
   validateTwoFactorInput,
   validateNameInputs,
   validatePasswordResetInput,
 } = require("../helpers/validations");
+const { 
+  sendPasswordResetEmail, 
+  sendTwoFactorsMail, 
+} = require("../helpers/emailHelpers");
 
 // REGISTER FUNCTION
 const register = async (req, res) => {
   try {
     const { first_name, last_name, email, password, confirmPassword } = req.body;
 
-    const validationError = validateUserInput(req.body); // validate requested inputs
+    const validationError = validateRegisterInput(req.body); // validate requested inputs
     if (validationError) return res.status(400).json({ errMessage: validationError });
 
     const emailQuery = "SELECT 1 FROM USER WHERE email = ?";
@@ -56,15 +59,6 @@ const register = async (req, res) => {
   }
 };
 
-// nodemailer for two factors authintication
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 const twoFactor = {}; // temp code stored here
 
 // LOGIN FUNCTION
@@ -98,12 +92,11 @@ const login = (req, res) => {
       twoFactor[tempToken] = { userId: user.user_id, twoFactorCode, expires };
 
       // send email to user
-      await transporter.sendMail({
-        from: `"SustainWear" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: "Your 2FA Verification Code",
-        text: `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`,
-      });
+      await sendTwoFactorsMail(
+        user.email,
+        "Your 2FA Verification Code",
+        `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`
+      );
 
       res.status(200).json({
         message: "2FA code sent to your email",
@@ -116,7 +109,7 @@ const login = (req, res) => {
 };
 
 // VERIFY TWO FACTORS CODE
-const VerifyTwoFactors = (req, res) => {
+const verifyTwoFactors = (req, res) => {
   try {
     const { tempToken, code } = req.body;
     const record = twoFactor[tempToken];
@@ -165,7 +158,7 @@ const VerifyTwoFactors = (req, res) => {
 };
 
 // RESEND TWO FACTORS CODE
-const ResendTwoFactors = (req, res) => {
+const resendTwoFactors = (req, res) => {
   try {
     const { tempToken } = req.body;
     const record = twoFactor[tempToken];
@@ -256,23 +249,53 @@ const requestPasswordChange = async (req, res) => {
   const userId = req.user?.id;
   const email = req.user?.email;
 
-  if (!userId || !email) return res.status(401).json({ errMessage: "Unauthorized request" });
+  if (!userId || !email)
+    return res.status(401).json({ errMessage: "Unauthorized request" });
 
-  try { // generate short lived JWT token
-    const token = jwt.sign({ id: userId }, jwtSecret, { expiresIn: "15m" });
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+  try {
+    await sendPasswordResetEmail(
+      email,
+      userId,
+      process.env.FRONTEND_URL,
+      "Change Your Password",
+      "Click the link below to change your password (expires in 15 minutes):"
+    );
 
-    await transporter.sendMail({
-      from: `"SustainWear" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Change Your Password",
-      text: `Click the link below to change your password (expires in 15 minutes):\n\n${resetLink}`,
+    res.status(200).json({
+      message: "Password change link sent to your email",
     });
-
-    res.status(200).json({ message: "Password change link sent to your email" });
   } catch (err) {
     res.status(500).json({ errMessage: "Failed to send email" });
   }
+};
+
+// FORGOT PASSWORD, SEND RESET LINK TO NOT LOGGED IN USER
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ errMessage: "Email is required" });
+
+  const query = `SELECT user_id FROM USER WHERE email = ?`;
+
+  db.get(query, [email], async (err, user) => {
+    if (err) return res.status(500).json({ errMessage: "Database error" });
+    if (!user) return res.status(404).json({ errMessage: "No account found with this email" });
+
+    try {
+      await sendPasswordResetEmail(
+        email,
+        user.user_id,
+        process.env.FRONTEND_URL,
+        "Reset Your Password",
+        "Click the link below to reset your password (expires in 15 minutes):"
+      );
+
+      res.status(200).json({
+        message: "Password reset link sent successfully",
+      });
+    } catch (err) {
+      res.status(500).json({ errMessage: "Failed to send reset email" });
+    }
+  });
 };
 
 // RESET PASSWORD
@@ -287,7 +310,7 @@ const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     db.run(`UPDATE USER SET password = ? WHERE user_id = ?`, [hashedPassword, decoded.id],
-       (err) => {
+      (err) => {
         if (err) return res.status(500).json({ errMessage: "Failed to update password" });
 
         res.status(200).json({ message: "Password changed successfully" });
@@ -327,11 +350,12 @@ const logout = (req, res) => {
 module.exports = {
   register,
   login,
-  VerifyTwoFactors,
-  ResendTwoFactors,
+  verifyTwoFactors,
+  resendTwoFactors,
   getProfile,
   updateName,
   requestPasswordChange,
+  forgotPassword,
   resetPassword,
   deleteAccount,
   logout,

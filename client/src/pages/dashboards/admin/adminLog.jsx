@@ -9,6 +9,7 @@ import {
   Td,
   Heading,
   Spinner,
+  Tooltip,
 } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
@@ -132,6 +133,8 @@ export default function AdminLog() {
               <Th
                 key={headerI}
                 onClick={() => sortRows(header.replace(" ", "_"))}
+                cursor="pointer"
+                _hover={{ textDecoration: "underline" }}
               >
                 {header}
               </Th>
