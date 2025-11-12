@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
 import toast from "react-hot-toast";
 import api from "../api/axiosClient";
-import ConfirmationModal from "./confirmationModal";
+import ConfirmLogout from "./modals/confirmLogoutModal";
 
 export default function LogoutBtn() {
   const { logout } = useAuth();
@@ -16,13 +16,18 @@ export default function LogoutBtn() {
       console.warn("Logout request failed (continuing):", err.message);
     }
 
-    logout(); // clears token and user context
+    logout(); // clear token and user context
     toast.success("Logged out successfully");
     navigate("/login");
   };
 
   return (
-    <ConfirmationModal title="Logout" message="Are you sure you want to log out?" confirmText="Logout" closeText="Return">
+    <ConfirmLogout
+      title="Logout"
+      message="Are you sure you want to log out?"
+      confirmText="Logout"
+      closeText="Return"
+    >
       <Button
         ml={4}
         colorScheme="red"
@@ -33,6 +38,6 @@ export default function LogoutBtn() {
       >
         Logout
       </Button>
-    </ConfirmationModal>
+    </ConfirmLogout>
   );
 }

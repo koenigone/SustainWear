@@ -1,5 +1,5 @@
 const db = require("../config/db");
-const { logAuditAction } = require("../helpers/auditLogger");
+const { adminAuditLogger } = require("../helpers/adminAuditLogger");
 const { validateOrganisationInput } = require("../helpers/validations");
 
 // UPDATE USER ROLE (Admin only)
@@ -57,7 +57,7 @@ const updateUser = (req, res) => {
       // action: Promotion
       if (role === "Admin" && user.role !== "Admin") action = "Promoted user to Admin";
 
-      logAuditAction(admin_id, action, user_id); // add action to admin log
+      adminAuditLogger(admin_id, action, user_id); // add action to admin log
 
       res.status(200).json({ message: "User updated successfully" });
     });
@@ -104,7 +104,7 @@ const addOrganisation = (req, res) => {
 
       const action = "Organisation created";
       const orgId = this.lastID;
-      logAuditAction(admin_id, action, null, orgId); // add action to admin log
+      adminAuditLogger(admin_id, action, null, orgId); // add action to admin log
 
       res.status(201).json({
         message: "Organisation added successfully",
@@ -139,7 +139,7 @@ const updateOrganisationStatus = (req, res) => {
       return res.status(500).json({ errMessage: "Failed to update organisation", error: err.message });
 
     const action = is_active ? "Organisation activated" : "Organisation deactivated";
-    logAuditAction(admin_id, action, null, org_id); // add action to admin log
+    adminAuditLogger(admin_id, action, null, org_id); // add action to admin log
 
     res.status(200).json({ message: "Organisation status updated successfully" });
   });
@@ -156,7 +156,7 @@ const deleteOrganisation = (req, res) => {
       return res.status(500).json({ errMessage: "Failed to delete organisation", error: err.message });
 
     const action = "Organisation deleted";
-    logAuditAction(admin_id, action, null, id); // add action to admin log
+    adminAuditLogger(admin_id, action, null, id); // add action to admin log
 
     res.status(200).json({ message: "Organisation deleted successfully" });
   });
