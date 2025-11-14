@@ -129,14 +129,19 @@ export default function AdminLog() {
       <Table variant="simple">
         <Thead>
           <Tr>
-            {tableHeaders.map((header, headerI) => (
+            {tableHeaders.map((header, i) => (
               <Th
-                key={headerI}
+                key={i}
                 onClick={() => sortRows(header.replace(" ", "_"))}
                 cursor="pointer"
-                _hover={{ textDecoration: "underline" }}
+                _hover={{ textDecoration: "underline" }} 
+
+                //
+                
               >
-                {header}
+                <Tooltip label={`Sort by ${header}`} placement="top" hasArrow>
+                  {header}
+                </Tooltip>
               </Th>
             ))}
           </Tr>
