@@ -39,7 +39,7 @@ const validateTwoFactorInput = ({ tempToken, code, record }) => {
   return null; // valid
 }
 
-const validateNameInputs = (first_name, last_name) => {
+const validateNameInputs = ({first_name, last_name}) => {
   if (!first_name || !last_name) {
     return "First and last name are required";
   }
