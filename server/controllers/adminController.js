@@ -201,6 +201,129 @@ const getAuditLogs = (req, res) => {
   });
 };
 
+// ADD STAFF MEMBER TO ORGANISATION
+const addStaffToOrganisation = (req, res) => {
+  const { org_id } = req.params;
+  const { email } = req.body;
+
+  if (!email) return res.status(400).json({ errMessage: "Email is required" });
+
+  // find user by email
+  const findUserQuery = `SELECT * FROM USER WHERE email = ?`;
+
+  db.get(findUserQuery, [email], (err, user) => {
+    if (err) return res.status(500).json({ errMessage: "Database error" });
+
+    if (!user) return res.status(404).json({ errMessage: "User not found" });
+
+    if (user.role === "Admin") // prevent adding admins as staff
+      return res.status(400).json({ errMessage: "Admins cannot be assigned as staff" });
+
+    // prevent hiring user already staff of any org
+    const checkStaffQuery = "SELECT * FROM ORGANISATION_STAFF WHERE user_id = ?";
+
+    db.get(checkStaffQuery, [user.user_id], (err2, existing) => {
+      if (err2) return res.status(500).json({ errMessage: "Database error" });
+
+      if (existing)
+        return res.status(400).json({
+          errMessage: "User is already staff for another organisation",
+        });
+
+      // add staff record
+      const addUserQuery = "INSERT INTO ORGANISATION_STAFF (org_id, user_id) VALUES (?, ?)";
+
+      db.run(addUserQuery, [org_id, user.user_id], function (err3) {
+        if (err3) return res.status(500).json({ errMessage: "Database error" });
+        
+        // change user role to Staff only if donor
+        if (user.role === "Donor") {
+          const updateRoleQuery = "UPDATE USER SET role = 'Staff' WHERE user_id = ?";
+          db.run(updateRoleQuery, [user.user_id]);
+        }
+
+        return res.status(201).json({
+          message: "Staff added successfully",
+          org_staff_id: this.lastID,
+        });
+      });
+    });
+  });
+};
+
+// GET STAFF FOR AN ORGANISATION
+const getOrganisationStaff = (req, res) => {
+  const { org_id } = req.params;
+
+  const query = `
+    SELECT 
+      os.org_staff_id,
+      os.user_id,
+      os.staff_role,
+      os.is_active,
+      os.assigned_at,
+      u.first_name,
+      u.last_name,
+      u.email
+    FROM ORGANISATION_STAFF os
+    JOIN USER u ON os.user_id = u.user_id
+    WHERE os.org_id = ?
+  `;
+
+  db.all(query, [org_id], (err, rows) => {
+    if (err) return res.status(500).json({ errMessage: "Database error" });
+    res.status(200).json(rows);
+  });
+};
+
+// TOGGLE STAFF ACTIVE STATUS
+const toggleOrganisationStaff = (req, res) => {
+  const { org_id, user_id } = req.params;
+  const { is_active } = req.body;
+
+  if (is_active === undefined)
+    return res.status(400).json({ errMessage: "is_active value is required" });
+
+  const query = `
+    UPDATE ORGANISATION_STAFF 
+    SET is_active = ?, removed_at = (CASE WHEN ? = 0 THEN CURRENT_TIMESTAMP ELSE NULL END)
+    WHERE org_id = ? AND user_id = ?
+  `;
+
+  db.run(query, [is_active ? 1 : 0, is_active ? 1 : 0, org_id, user_id], function (err) {
+    if (err) return res.status(500).json({ errMessage: "Database error" });
+
+    if (this.changes === 0)
+      return res.status(404).json({ errMessage: "Staff not found in this organisation" });
+
+    res.status(200).json({
+      message: is_active ? "Staff activated" : "Staff deactivated",
+    });
+  });
+};
+
+// REMOVE STAFF MEMBER FROM ORGANISATION
+const removeOrganisationStaff = (req, res) => {
+  const { org_id, user_id } = req.params;
+
+  const deleteQuery = "DELETE FROM ORGANISATION_STAFF WHERE org_id = ? AND user_id = ?";
+
+  db.run(deleteQuery, [org_id, user_id], function (err) {
+    if (err) return res.status(500).json({ errMessage: "Database error" });
+    if (this.changes === 0) return res.status(404).json({ errMessage: "Staff not found" });
+
+    // revert role: Staff -> Donor
+    const updateRoleQuery = `UPDATE USER SET role = 'Donor' WHERE user_id = ?`;
+
+    db.run(updateRoleQuery, [user_id], (err2) => {
+      if (err2)
+        return res.status(500).json({ errMessage: "Failed to revert user role" });
+
+      return res.status(200).json({ message: "Staff removed and role reverted to Donor" });
+    });
+  });
+};
+
 module.exports = {
   getAllUsers,
   updateUser,
@@ -209,4 +332,8 @@ module.exports = {
   updateOrganisationStatus,
   deleteOrganisation,
   getAuditLogs,
+  addStaffToOrganisation,
+  getOrganisationStaff,
+  toggleOrganisationStaff,
+  removeOrganisationStaff,
 };

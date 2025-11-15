@@ -9,9 +9,9 @@ const {
   validateNameInputs,
   validatePasswordResetInput,
 } = require("../helpers/validations");
-const { 
-  sendPasswordResetEmail, 
-  sendTwoFactorsMail, 
+const {
+  sendPasswordResetEmail,
+  sendTwoFactorsMail,
 } = require("../helpers/emailHelpers");
 
 // REGISTER FUNCTION
@@ -205,25 +205,45 @@ const resendTwoFactors = (req, res) => {
 };
 
 // GET PROFILE FUNCTION
+const { getStaffOrganisation } = require("./orgController"); // make sure path is right
+
+// GET PROFILE FUNCTION
 const getProfile = (req, res) => {
   const userId = req.user?.id;
 
   if (!userId) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const getProfileQuery = "SELECT * FROM USER WHERE user_id = ?";
+  const getProfileQuery =
+    "SELECT user_id, first_name, last_name, email, role FROM USER WHERE user_id = ?";
 
   db.get(getProfileQuery, [userId], (err, user) => {
     if (err) return res.status(500).json({ errMessage: "Database error" });
     if (!user) return res.status(404).json({ errMessage: "User not found" });
 
-    res.status(200).json({
-      user: {
-        id: user.user_id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role,
-      },
+    // If user is NOT Staff → return basic user
+    if (user.role !== "Staff") {
+      return res.status(200).json({
+        user: {
+          ...user,
+          organisation: null,
+        },
+      });
+    }
+
+    // fetch organisation details if user is staff
+    getStaffOrganisation(user.user_id, (orgErr, org) => {
+      if (orgErr) {
+        return res.status(500).json({
+          errMessage: "Failed to load organisation details",
+        });
+      }
+
+      return res.status(200).json({
+        user: {
+          ...user,
+          organisation: org || null,
+        },
+      });
     });
   });
 };

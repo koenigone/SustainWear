@@ -4,7 +4,7 @@ import {
   Table,
   Thead,
   Tbody,
-  Flex,
+  VStack,
   Tr,
   Th,
   Td,
@@ -14,27 +14,37 @@ import {
   Heading,
   Spinner,
   useDisclosure,
-  Text,
 } from "@chakra-ui/react";
+
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
+
 import AddOrgModal from "../../../components/modals/addOrgModal.jsx";
 import ConfirmToggleOrgModal from "../../../components/modals/confirmToggleOrgModal.jsx";
 import ConfirmOrgDeletionModal from "../../../components/modals/confirmOrgDeletionModal.jsx";
+import ManageStaffModal from "../../../components/modals/manageStaffModal.jsx";
 
 export default function ManageOrganisations() {
   const [orgs, setOrgs] = useState([]);
   const [filteredOrgs, setFilteredOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [selectedOrg, setSelectedOrg] = useState(null);
+  const [staffList, setStaffList] = useState([]);
+
   const [orgToDelete, setOrgToDelete] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [orgToToggle, setOrgToToggle] = useState(null);
+
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addModal = useDisclosure();
   const deleteModal = useDisclosure();
   const toggleModal = useDisclosure();
+  const staffModal = useDisclosure();
+
   const initialOrgData = {
     name: "",
     description: "",
@@ -43,10 +53,11 @@ export default function ManageOrganisations() {
     city: "",
     contact_email: "",
   };
+
   const [newOrg, setNewOrg] = useState(initialOrgData);
 
-
-  const fetchOrganisations = async () => { // fench all organisations
+  // fetch all organisations
+  const fetchOrganisations = async () => {
     try {
       const res = await api.get("/admin/organisations");
       setOrgs(res.data);
@@ -58,44 +69,46 @@ export default function ManageOrganisations() {
     }
   };
 
-  useEffect(() => { // initial fetch
+  // initial fetch
+  useEffect(() => {
     fetchOrganisations();
   }, []);
 
-  useEffect(() => { // real time search filtering
+  // filter search
+  useEffect(() => {
     const term = searchTerm.toLowerCase();
-    const filtered = orgs.filter(
-      (org) =>
-        org.name.toLowerCase().includes(term) ||
-        org.city.toLowerCase().includes(term) ||
-        org.contact_email.toLowerCase().includes(term)
+    setFilteredOrgs(
+      orgs.filter(
+        (org) =>
+          org.name.toLowerCase().includes(term) ||
+          org.city.toLowerCase().includes(term) ||
+          org.contact_email.toLowerCase().includes(term)
+      )
     );
-    setFilteredOrgs(filtered);
   }, [searchTerm, orgs]);
 
   // create new organisation
-  const handleCreate = async () => {
+  const handleOrgCreate = async () => {
     try {
       await api.post("/admin/organisations", newOrg);
       toast.success("Organisation added successfully");
       addModal.onClose();
 
-      const res = await api.get("/admin/organisations");
-      setOrgs(res.data);
-
+      fetchOrganisations();
       setNewOrg(initialOrgData);
     } catch (err) {
       toast.error(err.response?.data?.errMessage || "Failed to create organisation");
     }
   };
 
-  // handle toggle with confirmation modal
-  const confirmToggle = (org) => {
+  // open toggle confirmation
+  const confirmOrgToggle = (org) => {
     setOrgToToggle(org);
     toggleModal.onOpen();
   };
 
-  const handleToggleActive = async () => {
+  // activate/deactivate organisation
+  const handleOrgToggleActive = async () => {
     if (!orgToToggle) return;
     setIsProcessing(true);
 
@@ -107,10 +120,10 @@ export default function ManageOrganisations() {
 
       toast.success(
         `Organisation "${orgToToggle.name}" ${orgToToggle.is_active ? "deactivated" : "activated"
-        } successfully`
+        }`
       );
 
-      await fetchOrganisations();
+      fetchOrganisations();
     } catch {
       toast.error("Failed to update organisation status");
     } finally {
@@ -121,18 +134,18 @@ export default function ManageOrganisations() {
   };
 
   // confirm delete
-  const confirmDelete = (org) => {
+  const confirmOrgDelete = (org) => {
     setOrgToDelete(org);
     deleteModal.onOpen();
   };
 
   // delete organisation
-  const handleDelete = async () => {
+  const handleOrgDelete = async () => {
     setIsDeleting(true);
     try {
       await api.delete(`/admin/organisations/${orgToDelete.org_id}`);
-      toast.success("Organisation deleted successfully");
-      fetchOrganisations(); // refresh table
+      toast.success("Organisation deleted");
+      fetchOrganisations();
     } catch {
       toast.error("Failed to delete organisation");
     } finally {
@@ -141,7 +154,64 @@ export default function ManageOrganisations() {
     }
   };
 
-  if (loading) return <Spinner size="xl" />; // chakraUI's laoding spinner
+  // open manage staff modal
+  const openStaffModal = async (org) => {
+    setSelectedOrg(org);
+    staffModal.onOpen();
+
+    const res = await api.get(`/admin/org/${org.org_id}/staff`);
+    setStaffList(res.data);
+  };
+
+  const refreshStaff = async (orgId) => {
+    const res = await api.get(`/admin/org/${orgId}/staff`);
+    setStaffList(res.data);
+  };
+
+  // hire staff
+  const assignStaffByEmail = async (email) => {
+    if (!email.trim()) {
+      toast.error("Please enter an email");
+      return false;
+    }
+
+    try {
+      await api.post(`/admin/org/${selectedOrg.org_id}/staff`, { email });
+
+      toast.success("Staff member added");
+      await refreshStaff(selectedOrg.org_id);
+
+      // refresh staff
+      const res = await api.get(`/admin/org/${selectedOrg.org_id}/staff`);
+      setStaffList(res.data);
+
+      return true; // success
+    } catch (err) {
+      toast.error(err.response?.data?.errMessage || "Failed to add staff");
+      return false;
+    }
+  };
+
+  // remove staff
+  const removeStaff = async (staff) => {
+    await api.delete(`/admin/org/${selectedOrg.org_id}/staff/${staff.user_id}`);
+    setStaffList((prev) => prev.filter((s) => s.user_id !== staff.user_id));
+  };
+
+  // activate/deactivate staff
+  const toggleStaffActive = async (staff) => {
+    await api.put(`/admin/org/${selectedOrg.org_id}/staff/${staff.user_id}`, {
+      is_active: !staff.is_active,
+    });
+
+    setStaffList((prev) =>
+      prev.map((s) =>
+        s.user_id === staff.user_id ? { ...s, is_active: !s.is_active } : s
+      )
+    );
+  };
+
+  if (loading) return <Spinner size="xl" />;
 
   return (
     <Box p={6} bg="white" rounded="lg" boxShadow="md">
@@ -154,7 +224,6 @@ export default function ManageOrganisations() {
 
       <Input
         placeholder="Search by name, city, or email..."
-        _placeholder={{ color: "gray.400" }}
         mb={4}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
@@ -174,6 +243,7 @@ export default function ManageOrganisations() {
             <Th>Actions</Th>
           </Tr>
         </Thead>
+
         <Tbody>
           {filteredOrgs.length === 0 ? (
             <Tr>
@@ -185,38 +255,52 @@ export default function ManageOrganisations() {
             filteredOrgs.map((org) => (
               <Tr key={org.org_id}>
                 <Td>{org.name}</Td>
+
                 <Td maxW="300px" whiteSpace="normal" wordBreak="break-word">
                   {org.description}
                 </Td>
+
                 <Td>
                   {org.street_name}, {org.post_code}, {org.city}
                 </Td>
+
                 <Td>{org.contact_email}</Td>
-                <Td>
-                  <Text color={org.is_active ? "green.500" : "red.500"} fontWeight="bold">
-                    {org.is_active ? "Active" : "Inactive"}
-                  </Text>
+
+                <Td color={org.is_active ? "green.500" : "red.500"} fontWeight="bold">
+                  {org.is_active ? "Active" : "Inactive"}
                 </Td>
+
                 <Td>{new Date(org.created_at).toLocaleDateString()}</Td>
+
                 <Td>
-                  <Flex justify="center" align="center" gap={2}>
+                  <VStack spacing={2} justify="center" align="center">
                     <Button
                       size="sm"
-                      w="100px"
+                      w="120px"
+                      colorScheme="orange"
+                      onClick={() => openStaffModal(org)}
+                    >
+                      Manage Staff
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      w="120px"
                       colorScheme={org.is_active ? "yellow" : "green"}
-                      onClick={() => confirmToggle(org)}
+                      onClick={() => confirmOrgToggle(org)}
                     >
                       {org.is_active ? "Deactivate" : "Activate"}
                     </Button>
+
                     <Button
                       size="sm"
-                      w="100px"
+                      w="120px"
                       colorScheme="red"
-                      onClick={() => confirmDelete(org)}
+                      onClick={() => confirmOrgDelete(org)}
                     >
                       Delete
                     </Button>
-                  </Flex>
+                  </VStack>
                 </Td>
               </Tr>
             ))
@@ -224,34 +308,44 @@ export default function ManageOrganisations() {
         </Tbody>
       </Table>
 
-      {/* ADD ORGANISATION MODAL */}
+      {/* ADD ORG */}
       <AddOrgModal
         isOpen={addModal.isOpen}
         onClose={addModal.onClose}
-        onSubmit={handleCreate}
+        onSubmit={handleOrgCreate}
         orgData={newOrg}
         setOrgData={setNewOrg}
       />
 
-      {/* TOGGLE ORG ACTIVATION MODAL */}
+      {/* MANAGE STAFF */}
+      <ManageStaffModal
+        isOpen={staffModal.isOpen}
+        onClose={staffModal.onClose}
+        selectedOrg={selectedOrg}
+        staffList={staffList}
+        removeStaff={removeStaff}
+        toggleStaffActive={toggleStaffActive}
+        assignByEmail={assignStaffByEmail}
+      />
+
+      {/* TOGGLE ORG */}
       <ConfirmToggleOrgModal
         isOpen={toggleModal.isOpen}
         onClose={toggleModal.onClose}
-        onConfirm={handleToggleActive}
+        onConfirm={handleOrgToggleActive}
         target={orgToToggle}
         isLoading={isProcessing}
       />
 
-      {/* DELETE ORGANISATION MODAL */}
+      {/* DELETE ORG */}
       <ConfirmOrgDeletionModal
         isOpen={deleteModal.isOpen}
         onClose={deleteModal.onClose}
-        onConfirm={handleDelete}
+        onConfirm={handleOrgDelete}
         target={orgToDelete}
         entityName="organisation"
         isLoading={isDeleting}
       />
-
     </Box>
   );
 }

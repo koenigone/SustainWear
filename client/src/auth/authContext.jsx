@@ -1,62 +1,64 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axiosClient";
 
-/*
-  this file manages global authentication state using react context
-  It stores the logged in user, handles login/logout and automatically checks authentication on app load
-  All components can access the user's info and auth functions through this context
-
-  Structure:
-  -Creates an AuthContext to share authentication data across the app
-  -Uses useState to store the current user and loading state
-  -useEffect checks for a saved token on app load and fetches the user profile
-  -login(): handles user login and saves the token
-  -logout(): clears user data and removes tokens
-  -Provides all auth related data/functions via AuthContext.Provider
-*/
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [organisation, setOrganisation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  useEffect(() => { // load user + organisation on refresh
     const token = localStorage.getItem("token");
+
     if (!token) {
       setUser(null);
+      setOrganisation(null);
       setIsLoading(false);
       return;
     }
 
-    api
-      .get("/profile")
-      .then((res) => setUser(res.data.user))
+    api.get("/profile")
+      .then((res) => {
+        setUser(res.data.user);
+        setOrganisation(res.data.user.organisation || null); 
+      })
       .catch(() => {
         localStorage.removeItem("token");
         setUser(null);
+        setOrganisation(null);
       })
       .finally(() => setIsLoading(false));
   }, []);
 
+  // login request 2fa
   const login = async (email, password) => {
-    try {
-      const res = await api.post("/login", { email, password });
-      localStorage.setItem("token", res.data.token);
-      setUser(res.data.user);
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+    const res = await api.post("/login", { email, password });
+    localStorage.setItem("tempToken", res.data.tempToken);
+    return res.data;
   };
 
-  const logout = () => {
+  // verify 2fa code
+  const verifyTwoFA = async (tempToken, code) => {
+    const res = await api.post("/verifyTwoFactors", { tempToken, code });
+
+    localStorage.setItem("token", res.data.token);
+    localStorage.removeItem("tempToken");
+
+    setUser(res.data.user);
+    setOrganisation(res.data.user.organisation || null);
+  };
+
+  const logout = () => { // clear tokens and context on logout
     localStorage.removeItem("token");
     localStorage.removeItem("tempToken");
     setUser(null);
+    setOrganisation(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, isLoading, login, logout }}>
+    <AuthContext.Provider 
+      value={{ user, setUser, organisation, setOrganisation, isLoading, login, verifyTwoFA, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,9 +3,9 @@ import { useAuth } from "../auth/authContext";
 import LogoutBtn from "./logoutBtn";
 
 export default function Header() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, organisation } = useAuth();
 
-  if (isLoading) {
+  if (isLoading) { // still loading user info
     return (
       <Box
         bg="teal.600"
@@ -19,7 +19,7 @@ export default function Header() {
     );
   }
 
-  if (!user) {
+  if (!user) { // in case no user logged in and header is shown
     return (
       <Box
         bg="teal.600"
@@ -64,7 +64,9 @@ export default function Header() {
         borderRadius="md"
         colorScheme="green"
       >
-        {user.role}
+        {user.role === "Staff" && user.organisation
+          ? `Staff for ${user.organisation.name}`
+          : user.role}
       </Badge>
 
       <LogoutBtn />
