@@ -9,7 +9,7 @@ const db = require("../config/db");
  */
 const adminAuditLogger = (admin_id, action, target_user_id = null, target_org_id = null) => {
   const query = `
-    INSERT INTO AUDIT_LOG (admin_id, action, target_user_id, target_org_id, timestamp)
+    INSERT INTO ADMIN_LOG (admin_id, action, target_user_id, target_org_id, timestamp)
     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
   `;
   db.run(query, [admin_id, action, target_user_id, target_org_id], (err) => {

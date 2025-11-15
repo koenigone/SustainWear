@@ -182,7 +182,7 @@ const getAuditLogs = (req, res) => {
       COALESCE(o.name, '—') AS target_org_name,
       COALESCE(o.contact_email, '—') AS target_org_email
 
-    FROM AUDIT_LOG a
+    FROM ADMIN_LOG a
     LEFT JOIN USER u ON a.admin_id = u.user_id
     LEFT JOIN USER t ON a.target_user_id = t.user_id
     LEFT JOIN ORGANISATION o ON a.target_org_id = o.org_id
