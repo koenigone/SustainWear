@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { jwtSecret } = require("../config/jwt");
 const db = require("../config/db");
+const multer = require("multer");
+const path = require("path");
 
 // VERIFY USER TOKEN
 const verifyToken = (req, res, next) => {
@@ -53,8 +55,40 @@ const verifyResetToken = (req, res) => {
   }
 }
 
+// Allowed file types
+const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+
+// Multer storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/donations/"); // Make sure folder exists
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, unique + ext);
+  }
+});
+
+// File filter
+const fileFilter = (req, file, cb) => {
+  if (!allowedTypes.includes(file.mimetype)) {
+    return cb(new Error("Invalid file type. Only JPG, JPEG, and PNG allowed."));
+  }
+  cb(null, true);
+};
+
+// Max file: 2MB
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
+
 module.exports = { 
   verifyToken,
   verifyAdmin,
   verifyResetToken,
+  upload,
 };

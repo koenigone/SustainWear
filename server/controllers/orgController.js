@@ -11,6 +11,32 @@ const getStaffOrganisation = (user_id, callback) => {
   db.get(q, [user_id], callback);
 };
 
+// GET ALL ACTIVE ORGANISATIONS
+const getActiveOrganisations = (req, res) => {
+  const query = `
+    SELECT 
+      org_id, 
+      name, 
+      city, 
+      contact_email
+    FROM ORGANISATION
+    WHERE is_active = 1
+    ORDER BY name ASC
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Database error while retrieving organisations",
+        error: err.message
+      });
+    }
+
+    return res.status(200).json(rows);
+  });
+};
+
 module.exports = { 
   getStaffOrganisation,
+  getActiveOrganisations,
 };
