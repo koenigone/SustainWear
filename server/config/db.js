@@ -7,6 +7,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Database connection failed:", err);
   } else {
+    db.run("PRAGMA foreign_keys = ON;");
     console.log("Connected to SustainWear SQLite database");
   }
 });

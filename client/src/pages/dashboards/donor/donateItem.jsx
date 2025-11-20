@@ -15,7 +15,7 @@ import {
 import { useState, useEffect } from "react";
 import api from "../../../api/axiosClient";
 
-export default function DonationForm({ organisation }) {
+export default function DonateItem() {
   const toast = useToast();
 
   const [form, setForm] = useState({

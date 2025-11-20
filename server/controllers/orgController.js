@@ -2,18 +2,18 @@ const db = require("../config/db");
 
 // GET STAFF'S ORGANISATION INFO
 const getStaffOrganisation = (user_id, callback) => {
-  const q = `
+  const staffOrgQuery = `
     SELECT O.org_id, O.name 
     FROM ORGANISATION O
     JOIN ORGANISATION_STAFF OS ON O.org_id = OS.org_id
     WHERE OS.user_id = ? AND OS.is_active = 1
   `;
-  db.get(q, [user_id], callback);
+  db.get(staffOrgQuery, [user_id], callback);
 };
 
 // GET ALL ACTIVE ORGANISATIONS
 const getActiveOrganisations = (req, res) => {
-  const query = `
+  const activeOrgsQuery = `
     SELECT 
       org_id, 
       name, 
@@ -24,7 +24,7 @@ const getActiveOrganisations = (req, res) => {
     ORDER BY name ASC
   `;
 
-  db.all(query, [], (err, rows) => {
+  db.all(activeOrgsQuery, [], (err, rows) => {
     if (err) {
       return res.status(500).json({
         errMessage: "Database error while retrieving organisations",
@@ -36,7 +36,37 @@ const getActiveOrganisations = (req, res) => {
   });
 };
 
-module.exports = { 
+// GET ALL DONATION REQUESTS
+const getAllDonationRequests = (req, res) => {
+  const { org_id } = req.params;
+
+  const donationRequestsQuery = `
+  SELECT 
+    item_name, 
+    category, 
+    item_condition, 
+    size, gender, 
+    photo_url, 
+    status, 
+    submitted_at, 
+    description
+  FROM DONATION_TRANSACTION
+  WHERE org_id = ?`;
+
+  db.all(donationRequestsQuery, [org_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Database error while retrieving donation requests",
+        error: err.message
+      });
+    }
+
+    return res.status(200).json(rows);
+  });
+}
+
+module.exports = {
   getStaffOrganisation,
   getActiveOrganisations,
+  getAllDonationRequests,
 };

@@ -17,7 +17,7 @@ router.get("/verifyResetToken/:token", verifyResetToken);
 router.get("/profile", verifyToken, userController.getProfile);
 router.post("/logout", verifyToken, userController.logout);
 router.put("/updateName", verifyToken, userController.updateName);
-router.delete("/deleteAccount", verifyToken, userController.deleteAccount);
+router.post("/deactivateAccount", verifyToken, userController.deactivateAccount);
 router.post("/requestPasswordChange", verifyToken, userController.requestPasswordChange);
 
 module.exports = router;

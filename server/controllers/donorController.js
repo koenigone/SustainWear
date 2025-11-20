@@ -32,7 +32,7 @@ const submitDonationRequest = (req, res) => {
 
   // insert donation request into DB
   const insertQuery = `
-    INSERT INTO DONATION_REQUEST 
+    INSERT INTO DONATION_TRANSACTION 
     (donor_id, org_id, item_name, description, category, item_condition, size, gender, photo_url)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
@@ -102,7 +102,6 @@ const submitDonationRequest = (req, res) => {
 // GET ALL NOTIFICATIONS FOR LOGGED IN USER
 const getDonorNotifications = (req, res) => {
   const user_id = req.user?.id;
-
   if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
   const query = `
@@ -112,7 +111,7 @@ const getDonorNotifications = (req, res) => {
       message,
       created_at,
       is_read,
-      related_request_id
+      related_transaction_id
     FROM NOTIFICATION
     WHERE user_id = ?
     ORDER BY created_at DESC
@@ -122,7 +121,7 @@ const getDonorNotifications = (req, res) => {
     if (err) {
       return res.status(500).json({
         errMessage: "Failed to load notifications",
-        error: err.message
+        error: err.message,
       });
     }
 
@@ -133,26 +132,36 @@ const getDonorNotifications = (req, res) => {
 // MARK ONE NOTIFICATION AS READ
 const markNotificationRead = (req, res) => {
   const { notification_id } = req.params;
-  const user_id = req.user.id;
+  const user_id = req.user?.id;
+  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const query = "UPDATE NOTIFICATION SET is_read = 1 WHERE notification_id = ? AND user_id = ?";
+  const query = `
+    UPDATE NOTIFICATION
+    SET is_read = 1
+    WHERE notification_id = ? AND user_id = ?
+  `;
 
   db.run(query, [notification_id, user_id], (err) => {
-    if (err) return res.status(500).json({ errMessage: "Database error" });
-
+    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+    
     res.json({ message: "Notification marked as read" });
   });
 };
 
 // MARK ALL AS READ
 const markAllRead = (req, res) => {
-  const user_id = req.user.id;
+  const user_id = req.user?.id;
+  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const query = "UPDATE NOTIFICATION SET is_read = 1 WHERE user_id = ?";
+  const query = `
+    UPDATE NOTIFICATION
+    SET is_read = 1
+    WHERE user_id = ?
+  `;
 
   db.run(query, [user_id], (err) => {
-    if (err) return res.status(500).json({ errMessage: "Database error" });
-    
+    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+
     res.json({ message: "All notifications marked as read" });
   });
 };

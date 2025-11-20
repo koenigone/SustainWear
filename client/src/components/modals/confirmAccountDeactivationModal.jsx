@@ -10,7 +10,7 @@ import {
   Input,
 } from "@chakra-ui/react";
 
-export default function ConfirmAccountDeletionModal({
+export default function ConfirmAccountDeactivationModal({
   isOpen,
   onClose,
   onConfirm,
@@ -34,11 +34,11 @@ export default function ConfirmAccountDeletionModal({
           borderBottom="1px solid"
           borderColor="brand.green"
         >
-          Confirm Account Deletion
+          Confirm Account Deactivation
         </ModalHeader>
 
         <ModalBody textAlign="center" py={6}>
-          <Text mb={3}>Enter your password to confirm account deletion.</Text>
+          <Text mb={3}>Enter your password to confirm account deactivation.</Text>
           <Input
             type="password"
             placeholder="Enter Password"
@@ -73,7 +73,7 @@ export default function ConfirmAccountDeletionModal({
             onClick={onConfirm}
             isLoading={isLoading}
           >
-            Delete
+            Deactivate
           </Button>
           <Button variant="outline" color="brand.green" onClick={onClose}>
             Cancel

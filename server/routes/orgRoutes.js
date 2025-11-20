@@ -4,6 +4,7 @@ const orgController = require("../controllers/orgController");
 const { verifyToken } = require("../middlewares/middlewares");
 
 router.get("/my-organisation", verifyToken, orgController.getStaffOrganisation);
-router.get("/orgs/active", orgController.getActiveOrganisations);
+router.get("/active", orgController.getActiveOrganisations);
+router.get("/:org_id/donation-requests", orgController.getAllDonationRequests);
 
 module.exports = router;

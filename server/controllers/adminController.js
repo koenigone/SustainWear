@@ -34,9 +34,18 @@ const updateUser = (req, res) => {
     }
 
     // continue with updating
-    const updateQuery = `UPDATE USER SET role = ?, is_active = ? WHERE user_id = ?`;
+    let updateQuery;
+    let params;
 
-    db.run(updateQuery, [role, is_active, user_id], (updateErr) => {
+    if (normalizedStatus === 0) {
+      updateQuery = "UPDATE USER SET role = ?, is_active = 0, deactivation_type = 'ADMIN' WHERE user_id = ?";
+      params = [role, user_id];
+    } else {
+      updateQuery = "UPDATE USER SET role = ?, is_active = 1, deactivation_type = NULL WHERE user_id = ?";
+      params = [role, user_id];
+    }
+
+    db.run(updateQuery, params, (updateErr) => {
       if (updateErr)
         return res.status(500).json({
           errMessage: "Database error",
@@ -235,7 +244,7 @@ const addStaffToOrganisation = (req, res) => {
 
       db.run(addUserQuery, [org_id, user.user_id], function (err3) {
         if (err3) return res.status(500).json({ errMessage: "Database error" });
-        
+
         // change user role to Staff only if donor
         if (user.role === "Donor") {
           const updateRoleQuery = "UPDATE USER SET role = 'Staff' WHERE user_id = ?";

@@ -13,43 +13,126 @@ const {
   sendPasswordResetEmail,
   sendTwoFactorsMail,
 } = require("../helpers/emailHelpers");
+const { sendDonorNotification } = require("../helpers/donorNotifications");
 
 // REGISTER FUNCTION
 const register = async (req, res) => {
   try {
     const { first_name, last_name, email, password, confirmPassword } = req.body;
 
-    const validationError = validateRegisterInput(req.body); // validate requested inputs
-    if (validationError) return res.status(400).json({ errMessage: validationError });
+    const validationError = validateRegisterInput(req.body);
+    if (validationError) {
+      return res.status(400).json({ errMessage: validationError });
+    }
 
-    const emailQuery = "SELECT 1 FROM USER WHERE email = ?";
+    const emailQuery = `
+      SELECT user_id, is_active, has_received_welcome, deactivation_type
+      FROM USER
+      WHERE email = ?
+    `;
 
-    db.get(emailQuery, [email], async (dbErr, row) => {
-      if (dbErr) return res.status(500).json({ errMessage: "Database error", error: dbErr.message });
+    db.get(emailQuery, [email], async (dbErr, existingUser) => {
+      if (dbErr) {
+        return res.status(500).json({
+          errMessage: "Database error",
+          error: dbErr.message,
+        });
+      }
 
-      if (row) return res.status(400).json({ errMessage: "Email is already taken" });
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-      const hashedPassword = await bcrypt.hash(password, 10);   // hash password
-      const registerDate = new Date().toISOString();            // registerDate
-      const defaultRole = "Donor";                              // default user role
+      // case 1 - user exists but is deactivated
+      if (existingUser && existingUser.is_active === 0) {
 
-      const insertQuery = `
-        INSERT INTO USER (first_name, last_name, email, password, role, sign_up_date)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `;
+        if (existingUser.deactivation_type === "ADMIN") { // If admin deactivated, block reactivation
+          return res.status(403).json({
+            errMessage:
+              "Your account has been deactivated by an administrator. Please contact support.",
+          });
+        }
+
+        // only allow reactivation for deactivation_type = SELF
+        if (existingUser.deactivation_type === "SELF") {
+          const reactivateQuery = `
+            UPDATE USER
+            SET 
+              first_name = ?,
+              last_name = ?,
+              password = ?,
+              is_active = 1,
+              deactivation_type = NULL
+            WHERE user_id = ?
+          `;
+
+          db.run(
+            reactivateQuery,
+            [first_name, last_name, hashedPassword, existingUser.user_id],
+            (updateErr) => {
+              if (updateErr) {
+                return res.status(500).json({
+                  errMessage: "Failed to reactivate account",
+                  error: updateErr.message,
+                });
+              }
+
+              sendDonorNotification( // send welcome back notification
+                existingUser.user_id,
+                "Welcome back to SustainWear 🌱",
+                `Welcome back ${first_name}! Your account has been reactivated.`,
+                null
+              );
+
+              return res.status(200).json({
+                message: "Account reactivated successfully",
+                userId: existingUser.user_id,
+                reactivated: true,
+              });
+            }
+          );
+          return;
+        }
+      }
+
+      // case 2 user already exists and is active -> Reject
+      if (existingUser && existingUser.is_active === 1) {
+        return res.status(400).json({
+          errMessage: "This email is already associated with an active account",
+        });
+      }
+
+      // case 3 user does not exist -> create new
+      const registerDate = new Date().toISOString();
+      const defaultRole = "Donor";
+
+      const insertQuery = "INSERT INTO USER (first_name, last_name, email, password, role, sign_up_date) VALUES (?, ?, ?, ?, ?, ?)";
 
       db.run(insertQuery, [first_name, last_name, email, hashedPassword, defaultRole, registerDate],
-        (insertErr) => {
+        function (insertErr) {
           if (insertErr) {
             return res.status(500).json({
               errMessage: "Database error while creating user",
-              error: insertErr.message
+              error: insertErr.message,
             });
           }
 
+          const newUserId = this.lastID;
+
+          sendDonorNotification(
+            newUserId,
+            "Welcome to SustainWear 🌱",
+            `Welcome ${first_name}! We're glad to have you onboard.`,
+            null
+          );
+
+          db.run(
+            `UPDATE USER SET has_received_welcome = 1 WHERE user_id = ?`,
+            [newUserId]
+          );
+
           res.status(201).json({
             message: "Account created successfully as Donor",
-            userId: this.lastID
+            userId: newUserId,
+            reactivated: false,
           });
         }
       );
@@ -68,37 +151,70 @@ const login = (req, res) => {
 
     if (!email || !password) return res.status(400).json({ errMessage: "All fields are required" });
 
-    const loginQuery = "SELECT * FROM USER WHERE email = ?";
+    const loginQuery = `
+      SELECT user_id, email, password, role, is_active, deactivation_type, first_name, last_name
+      FROM USER
+      WHERE email = ?
+    `;
 
     db.get(loginQuery, [email], async (error, user) => {
-      if (error) return res.status(500).json({ errMessage: "Database error", error: error.message });
-      if (!user) return res.status(400).json({ errMessage: "Account does not exist" });
-      if (user.is_active === 0) { // check if user account has been deactivated
-        return res.status(403).json({
-          errMessage:
-            "This account has been deactivated. Please contact support or an administrator.",
+      if (error) {
+        return res.status(500).json({
+          errMessage: "Database error",
+          error: error.message,
         });
       }
 
-      // compare hashed passwords
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ errMessage: "Invalid email or password" });
+      if (!user) {
+        return res.status(400).json({ errMessage: "Account does not exist" });
+      }
 
-      // generate two factor code (6 digits)
+      // account deactivated
+      if (user.is_active === 0) {
+
+        if (user.deactivation_type === "ADMIN") { // deactivated by ADMIN
+          return res.status(403).json({
+            errMessage:
+              "Your account has been deactivated by an administrator. Please contact support.",
+          });
+        }
+
+        if (user.deactivation_type === "SELF") { // deactivated by SELF
+          return res.status(403).json({
+            errMessage:
+              "Your account is currently deactivated. You can reactivate it by registering again.",
+          });
+        }
+
+        return res.status(403).json({ // fallback
+          errMessage: "This account is currently deactivated.",
+        });
+      }
+
+      // password check
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ errMessage: "Invalid email or password" });
+      }
+
+      // generate 2FA code
       const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
       const tempToken = uuidv4();
-      const expires = Date.now() + 5 * 60 * 1000; // expires after 5 minutes
+      const expires = Date.now() + 5 * 60 * 1000;
 
-      twoFactor[tempToken] = { userId: user.user_id, twoFactorCode, expires };
+      twoFactor[tempToken] = {
+        userId: user.user_id,
+        twoFactorCode,
+        expires,
+      };
 
-      // send email to user
-      await sendTwoFactorsMail(
+      await sendTwoFactorsMail( // send 2FA email
         user.email,
         "Your 2FA Verification Code",
         `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`
       );
 
-      res.status(200).json({
+      return res.status(200).json({
         message: "2FA code sent to your email",
         tempToken,
       });
@@ -342,23 +458,47 @@ const resetPassword = async (req, res) => {
 };
 
 // DELETE ACCOUNT
-const deleteAccount = (req, res) => {
+const deactivateAccount = (req, res) => {
   const userId = req.user?.id;
   const { password } = req.body;
 
-  db.get(`SELECT password FROM USER WHERE user_id = ?`, [userId], async (err, user) => {
-    if (err) res.status(500).json({ errMessage: "Database error", error: err.message });
-    if (!user) return res.status(404).json({ errMessage: "User not found" });
+  if (!userId) return res.status(401).json({ errMessage: "Unauthorized" });
+  if (!password) return res.status(400).json({ errMessage: "Password is required" });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ errMessage: "Incorrect password" });
+  db.get(`SELECT password, is_active FROM USER WHERE user_id = ?`, // fetch user password hash
+    [userId],
+    async (err, user) => {
+      if (err) {
+        return res.status(500).json({
+          errMessage: "Database error",
+          error: err.message,
+        });
+      }
 
-    db.run(`DELETE FROM USER WHERE user_id = ?`, [userId], (err2) => {
-      if (err2) res.status(500).json({ errMessage: "Failed to delete account", error: err2.message });
+      if (!user) return res.status(404).json({ errMessage: "User not found" });
+      if (user.is_active === 0) return res.status(400).json({ errMessage: "Account already deactivated" });
 
-      res.status(200).json({ message: "Account deleted successfully" });
-    });
-  });
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) return res.status(400).json({ errMessage: "Incorrect password" });
+
+      // deactivate account and set deactivation_type to SELF
+      db.run("UPDATE USER SET is_active = 0, deactivation_type = 'SELF' WHERE user_id = ?;",
+        [userId],
+        (updateErr) => {
+          if (updateErr) {
+            return res.status(500).json({
+              errMessage: "Failed to deactivate account",
+              error: updateErr.message,
+            });
+          }
+
+          return res.status(200).json({
+            message: "Account deactivated successfully",
+          });
+        }
+      );
+    }
+  );
 };
 
 // LOGOUT
@@ -377,6 +517,6 @@ module.exports = {
   requestPasswordChange,
   forgotPassword,
   resetPassword,
-  deleteAccount,
+  deactivateAccount,
   logout,
 };

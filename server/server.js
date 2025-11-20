@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api", require("./routes/userRoutes"));        // authentication routes
 app.use("/api/donor", require("./routes/donorRoutes")); // donor specific routes
 app.use("/uploads", express.static("uploads"));         // serve static files from uploads folder
-app.use("/api/", require("./routes/orgRoutes"));        // organisation specific routes
+app.use("/api/orgs", require("./routes/orgRoutes"));    // organisation specific routes
 app.use("/api/admin", verifyToken, verifyAdmin, require("./routes/adminRoutes")); // admin specific routes
 
 process.on("uncaughtException", (err) => {

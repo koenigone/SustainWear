@@ -14,13 +14,13 @@ import api from "../api/axiosClient";
 import { useAuth } from "../auth/authContext";
 import { useNavigate } from "react-router-dom";
 import PasswordResetModal from "../components/modals/resetPasswordModal";
-import ConfirmAccountDeletion from "../components/modals/confirmAccountDeletionModal";
+import ConfirmAccountDeactivationModal from "../components/modals/confirmAccountDeactivationModal";
 
 export default function Settings() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
-  const deleteModal = useDisclosure();
+  const deactivateModal = useDisclosure();
   const passwordModal = useDisclosure();
 
   const [nameData, setNameData] = useState({
@@ -28,7 +28,7 @@ export default function Settings() {
     last_name: user?.last_name || "",
   });
 
-  const [deletePassword, setDeletePassword] = useState("");
+  const [deactivatePassword, setDeactivatePassword] = useState("");
 
   // change first/last name
   const handleNameChange = async () => {
@@ -45,15 +45,17 @@ export default function Settings() {
     }
   };
 
-  // delete account
-  const handleDeleteAccount = async () => {
+  // deactivate account
+  const handleDeactivateAccount = async () => {
     try {
-      await api.delete("/deleteAccount", { data: { password: deletePassword } });
-      toast.success("Account deleted");
-      deleteModal.onClose();
+      await api.post("/deactivateAccount", {
+        password: deactivatePassword
+      });
+      toast.success("Account deactivated successfully");
+      deactivateModal.onClose();
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.errMessage || "Failed to delete account");
+      toast.error(err.response?.data?.errMessage || "Failed to deactivate account");
     }
   };
 
@@ -146,20 +148,20 @@ export default function Settings() {
 
         <VStack w="100%" spacing={3}>
           <Heading size="sm" color="red.500">
-            Delete Account
+            Deactivate Account
           </Heading>
           <Text fontSize="sm" color="gray.600">
-            This action is irreversible. All your data will be permanently
-            removed.
+            Your account will be deactivated.
+            You can restore access to all your data by re-registering with the same email address.
           </Text>
           <Button
             bg="red.500"
             color="white"
             _hover={{ bg: "red.600" }}
             w="100%"
-            onClick={deleteModal.onOpen}
+            onClick={deactivateModal.onOpen}
           >
-            Delete Account
+            Deactivate Account
           </Button>
         </VStack>
       </VStack>
@@ -171,13 +173,13 @@ export default function Settings() {
         isAuthenticated={true}
       />
 
-      {/* ENTER PASSWORD TO CONFIRM DELETION MODAL */}
-      <ConfirmAccountDeletion
-        isOpen={deleteModal.isOpen}
-        onClose={deleteModal.onClose}
-        onConfirm={handleDeleteAccount}
-        password={deletePassword}
-        setPassword={setDeletePassword}
+      {/* ENTER PASSWORD TO CONFIRM DEACTIVATE MODAL */}
+      <ConfirmAccountDeactivationModal
+        isOpen={deactivateModal.isOpen}
+        onClose={deactivateModal.onClose}
+        onConfirm={handleDeactivateAccount}
+        password={deactivatePassword}
+        setPassword={setDeactivatePassword}
       />
     </Box>
   );

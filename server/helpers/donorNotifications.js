@@ -1,13 +1,17 @@
 const db = require("../config/db");
 
-function sendDonorNotification(user_id, title, message, related_request_id = null) {
+function sendDonorNotification(user_id, title, message, related_transaction_id = null) {
   const q = `
-    INSERT INTO NOTIFICATION (user_id, title, message, related_request_id)
+    INSERT INTO NOTIFICATION (user_id, title, message, related_transaction_id)
     VALUES (?, ?, ?, ?)
   `;
 
-  db.run(q, [user_id, title, message, related_request_id], (err) => {
-    if (err) console.error("Notification Error:", err.message);
+  db.run(q, [user_id, title, message, related_transaction_id], function (err) {
+    if (err) {
+      console.error("Notification Insert Error:", err.message);
+    } else {
+      console.log("Notification inserted with ID:", this.lastID);
+    }
   });
 }
 
