@@ -213,7 +213,7 @@ const getDonationHistory = (req, res) => {
       status,
       submitted_at,
       description
-    FROM DONATION_REQUEST
+    FROM DONATION_TRANSACTION
     WHERE donor_id = ? AND status <> 'Rejected'
     ORDER BY submitted_at DESC`;
 
