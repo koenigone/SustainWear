@@ -9,6 +9,8 @@ import AdminDashboard from "./pages/dashboards/admin/adminDashboard";
 import Landing from "./pages/landing";
 import VerifyTwoFactor from "./pages/verifyTwoFactor";
 import ResetPassword from "./pages/resetPassword";
+import StaffActivityHistory from "./pages/dashboards/staff/staffActivityHistory";
+
 
 function App() {
   return (
@@ -46,6 +48,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+         path="/staff/activity"
+         element={
+          <ProtectedRoute allowedRoles={["Staff"]}>
+           <StaffActivityHistory />
+       </ProtectedRoute>
+       }
+     />
+
       </Routes>
     </>
   );
