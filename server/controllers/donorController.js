@@ -145,6 +145,7 @@ const getDonorNotifications = (req, res) => {
 // MARK ONE NOTIFICATION AS READ
 const markNotificationRead = (req, res) => {
   const { notification_id } = req.params;
+
   const user_id = req.user?.id;
   if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
@@ -154,8 +155,11 @@ const markNotificationRead = (req, res) => {
     WHERE notification_id = ? AND user_id = ?
   `;
   db.run(query, [notification_id, user_id], (err) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
-    
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
+
     res.json({ message: "Notification marked as read" });
   });
 };
@@ -172,11 +176,10 @@ const markAllRead = (req, res) => {
   `;
 
   db.run(query, [user_id], (err) => {
-<<<<<<< HEAD
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
-=======
-    if (err) return res.status(500).json({ errMessage: "Database error" });
->>>>>>> d84b9ed (add donation history feature: implement API endpoint and frontend display)
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
 
     res.json({ message: "All notifications marked as read" });
   });
