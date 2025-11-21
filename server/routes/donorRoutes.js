@@ -14,6 +14,7 @@ router.post(
 router.get("/notifications", verifyToken, donorController.getDonorNotifications);
 router.put("/notifications/:notification_id/read", verifyToken, donorController.markNotificationRead);
 router.put("/notifications/read-all", verifyToken, donorController.markAllRead);
+router.post("/generate-description", verifyToken, donorController.generateDonationDescription);
 
 // Donation history route
 router.get("/donations/history", verifyToken, donorController.getDonationHistory);

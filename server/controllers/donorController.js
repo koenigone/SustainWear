@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const { sendDonorNotification } = require("../helpers/donorNotifications");
 const { sendEmail } = require("../helpers/mailer");
+const generateItemDescription = require("../services/aiDescriptionService");
 
 // SUBMIT DONATION REQUEST
 const submitDonationRequest = (req, res) => {
@@ -241,10 +242,34 @@ const getDonationHistory = (req, res) => {
   });
 };
 
+// GENERATE DONATION DESCRIPTION USING AI
+const generateDonationDescription = async (req, res) => {
+  try {
+    const { item_name, category, item_condition, size, gender } = req.body;
+
+    // call AI service and pass parameters from request body
+    const description = await generateItemDescription({
+      item_name,
+      category,
+      item_condition,
+      size,
+      gender,
+    });
+
+    res.status(200).json({ description });
+  } catch (err) {
+    res.status(500).json({
+      errMessage: "Failed to generate description",
+      debug: err?.message || err
+    });
+  }
+};
+
 module.exports = {
   submitDonationRequest,
   getDonorNotifications,
   markNotificationRead,
   markAllRead,
   getDonationHistory,
+  generateDonationDescription,
 };

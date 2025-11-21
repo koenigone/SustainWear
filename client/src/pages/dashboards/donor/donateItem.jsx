@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+
   FormControl,
   FormLabel,
   Input,
@@ -11,7 +12,7 @@ import {
   VStack,
   useToast,
 } from "@chakra-ui/react";
-
+import { IoSparkles } from "react-icons/io5";
 import { useState, useEffect } from "react";
 import api from "../../../api/axiosClient";
 
@@ -32,6 +33,7 @@ export default function DonateItem() {
   const [preview, setPreview] = useState(null);
   const [organisations, setOrganisations] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -65,6 +67,44 @@ export default function DonateItem() {
         title: "Failed to load organisations"
       }));
   }, []);
+
+  const handleGenerateDescription = async () => {
+    if (!form.item_name || !form.category || !form.item_condition) {
+      toast({
+        status: "error",
+        title: "Missing information",
+        description: "Please enter name, category and condition first."
+      });
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+
+      const res = await api.post("/donor/generate-description", {
+        item_name: form.item_name,
+        category: form.category,
+        item_condition: form.item_condition,
+        size: form.size,
+        gender: form.gender,
+      });
+
+      setForm(prev => ({
+        ...prev,
+        description: res.data.description
+      }));
+
+      toast({ status: "success", title: "Description generated!" });
+    } catch (err) {
+      toast({
+        status: "error",
+        title: "AI Error",
+        description: err.response?.data?.errMessage || "Failed to generate description",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   // hnadle form submission
   const handleSubmit = async () => {
@@ -211,6 +251,23 @@ export default function DonateItem() {
               bg: "white",
             }}
           />
+
+          <Button
+            mt={2}
+            size="sm"
+            bg="purple.600"
+            color="white"
+            _hover={{ bg: "purple.700" }}
+            _active={{ bg: "purple.800" }}
+            _focus={{ boxShadow: "0 0 0 2px rgba(128, 90, 213, 0.6)" }}
+            onClick={handleGenerateDescription}
+            isLoading={isGenerating}
+            loadingText="Generating..."
+            leftIcon={<IoSparkles size={16} />}
+            gap={2}
+          >
+            Generate with AI
+          </Button>
         </FormControl>
 
         {/* Category */}

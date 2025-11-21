@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useNotifications } from "../../../components/notificationsContext";
-import { BellIcon } from "@chakra-ui/icons";
+import { FaBell } from "react-icons/fa";
 import api from "../../../api/axiosClient";
 
 export default function Notifications({ isActive }) {
@@ -99,7 +99,7 @@ export default function Notifications({ isActive }) {
       {/* HEADER BAR */}
       <HStack justify="space-between" mb={4}>
         <HStack>
-          <Icon as={BellIcon} w={6} h={6} color="green.600" />
+          <FaBell size="24" color="#38A169" />
           <Text fontSize="2xl" fontWeight="bold" color="green.600">
             Notifications
           </Text>
