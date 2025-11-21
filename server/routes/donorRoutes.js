@@ -15,4 +15,6 @@ router.get("/notifications", verifyToken, donorController.getDonorNotifications)
 router.put("/notifications/:notification_id/read", verifyToken, donorController.markNotificationRead);
 router.put("/notifications/read-all", verifyToken, donorController.markAllRead);
 
+// Donation history route
+router.get("/donations/history", verifyToken, donorController.getDonationHistory);
 module.exports = router;

@@ -15,14 +15,20 @@ const submitDonationRequest = (req, res) => {
     gender,
   } = req.body;
 
-
   if (!req.file) {
     return res.status(400).json({ errMessage: "Image upload is required." });
   }
 
   const photo_url = `/uploads/donations/${req.file.filename}`;
 
-  if (!item_name || !description || !category || !item_condition || !size || !gender) {
+  if (
+    !item_name ||
+    !description ||
+    !category ||
+    !item_condition ||
+    !size ||
+    !gender
+  ) {
     return res.status(400).json({ errMessage: "All fields are required." });
   }
 
@@ -61,20 +67,26 @@ const submitDonationRequest = (req, res) => {
       const request_id = this.lastID;
 
       // get org info and donor info for notification and email
-      db.get("SELECT name FROM ORGANISATION WHERE org_id = ?", [org_id], (orgErr, org) => {
-        if (!orgErr && org) {
-          sendDonorNotification( // create in app notification
-            donor_id,
-            "Donation Submitted",
-            `Your donation request has been sent to ${org.name} and is awaiting review.`,
-            request_id
-          );
+      db.get(
+        "SELECT name FROM ORGANISATION WHERE org_id = ?",
+        [org_id],
+        (orgErr, org) => {
+          if (!orgErr && org) {
+            sendDonorNotification(
+              // create in app notification
+              donor_id,
+              "Donation Submitted",
+              `Your donation request has been sent to ${org.name} and is awaiting review.`,
+              request_id
+            );
 
-          db.get("SELECT email, first_name FROM USER WHERE user_id = ?", [donor_id],
-            (userErr, user) => {
-              if (!userErr && user) {
-                const subject = `Donation Submitted to ${org.name}`;
-                const message = `
+            db.get(
+              "SELECT email, first_name FROM USER WHERE user_id = ?",
+              [donor_id],
+              (userErr, user) => {
+                if (!userErr && user) {
+                  const subject = `Donation Submitted to ${org.name}`;
+                  const message = `
                   Hi ${user.first_name},<br/><br/>
                   Your donation <b>${item_name}</b> has been successfully submitted to 
                   <b>${org.name}</b>.<br/>
@@ -82,12 +94,13 @@ const submitDonationRequest = (req, res) => {
                   Thank you for supporting SustainWear! 💚
                 `;
 
-                sendEmail(user.email, subject, message); // send confirmation email
+                  sendEmail(user.email, subject, message); // send confirmation email
+                }
               }
-            }
-          );
+            );
+          }
         }
-      });
+      );
 
       // respond with success
       res.status(201).json({
@@ -132,6 +145,7 @@ const getDonorNotifications = (req, res) => {
 // MARK ONE NOTIFICATION AS READ
 const markNotificationRead = (req, res) => {
   const { notification_id } = req.params;
+
   const user_id = req.user?.id;
   if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
@@ -140,10 +154,12 @@ const markNotificationRead = (req, res) => {
     SET is_read = 1
     WHERE notification_id = ? AND user_id = ?
   `;
-
   db.run(query, [notification_id, user_id], (err) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
-    
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
+
     res.json({ message: "Notification marked as read" });
   });
 };
@@ -160,9 +176,68 @@ const markAllRead = (req, res) => {
   `;
 
   db.run(query, [user_id], (err) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
 
     res.json({ message: "All notifications marked as read" });
+  });
+};
+
+// Get donors donation history
+const getDonationHistory = (req, res) => {
+  const user_id = req.user?.id;
+
+  // used to check if photo_url is already a full URL
+  const isURL = (value) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
+
+  // switch table from requests to transactions on pull
+  const query = `
+    SELECT 
+      item_name,
+      category,
+      size,
+      gender,
+      item_condition,
+      photo_url,
+      status,
+      submitted_at,
+      description
+    FROM DONATION_TRANSACTION
+    WHERE donor_id = ? AND status <> 'Rejected'
+    ORDER BY submitted_at DESC`;
+
+  db.all(query, [user_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to load donation history",
+        error: err.message,
+      });
+    }
+
+    // modify photo_url to be full URL if not already
+    const modifiedRows = rows.map((row) => {
+      if (row.photo_url && !isURL(row.photo_url)) {
+        return {
+          ...row,
+          photo_url: `${process.env.BACKEND_URL}${row.photo_url}`,
+        };
+      } else {
+        return row;
+      }
+    });
+
+    return res.status(200).json(modifiedRows);
   });
 };
 
@@ -171,4 +246,5 @@ module.exports = {
   getDonorNotifications,
   markNotificationRead,
   markAllRead,
+  getDonationHistory,
 };
