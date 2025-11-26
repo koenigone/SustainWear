@@ -31,7 +31,7 @@ const DonationHistory = () => {
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [searchValue, setSearchValue] = useState("");
   const [statusChangeReason, setStatusChangeReason] = useState("");
-  const { organisation, user } = useAuth();
+  const { organisation } = useAuth();
 
   // toggles the visibility of an expanded rowe
   const toggleIndex = (index) =>
