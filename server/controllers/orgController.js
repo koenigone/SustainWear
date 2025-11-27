@@ -1,4 +1,6 @@
 const db = require("../config/db");
+const { sendDonorNotification } = require("../helpers/donorNotifications");
+const { sendEmail } = require("../helpers/mailer");
 
 // GET STAFF'S ORGANISATION INFO
 const getStaffOrganisation = (user_id, callback) => {
@@ -90,10 +92,6 @@ const getAllDonationRequests = (req, res) => {
 };
 
 const updateDontationRequestStatus = (req, res) => {
-  console.log("Received request to update donation request status");
-  console.log("Request params:", req.params);
-  console.log("Request body:", req.body);
-
   const { transaction_id } = req.params;
   const { status, handled_by_staff_id, reason } = req.body;
 
@@ -113,9 +111,50 @@ const updateDontationRequestStatus = (req, res) => {
         });
       }
 
-      return res.status(200).json({
-        message: "Donation request status updated successfully",
-        changes: this.changes,
+      const userQuery = `SELECT user_id, email
+        FROM DONATION_TRANSACTION d
+        JOIN USER u ON u.user_id = d.donor_id
+        WHERE transaction_id = ?;`;
+
+      db.get(userQuery, [transaction_id], (userErr, userRow) => {
+        if (userErr) {
+          console.error("Error fetching user for notifications:", userErr);
+          return res.status(200).json({
+            message:
+              "Donation request status updated successfully but failed to fetch user for notifications",
+            changes: this.changes,
+          });
+        }
+
+        try {
+          sendEmail(
+            userRow.email,
+            `Donation Request ${status}`,
+            `Your donation request (ID: ${transaction_id}) has been ${status} ${
+              reason ? ` Reason: ${reason}` : ""
+            }.`
+          );
+        } catch (emailErr) {
+          console.error("Error sending email notification:", emailErr);
+        }
+
+        try {
+          sendDonorNotification(
+            userRow.user_id,
+            `Donation Request ${status}`,
+            `Your donation request (ID: ${transaction_id}) has been ${status} ${
+              reason ? ` Reason: ${reason}` : ""
+            }.`,
+            transaction_id
+          );
+        } catch (notifErr) {
+          console.error("Error sending donor notification:", notifErr);
+        }
+
+        return res.status(200).json({
+          message: "Donation request status updated successfully",
+          changes: this.changes,
+        });
       });
     }
   );

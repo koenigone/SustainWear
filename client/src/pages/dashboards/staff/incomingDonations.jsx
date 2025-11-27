@@ -113,7 +113,11 @@ const DonationHistory = () => {
   useEffect(() => {
     api
       .get(`/orgs/${organisation?.org_id}/donation-requests`)
-      .then((res) => setDonations(res.data))
+      .then((res) =>
+        setDonations(
+          res.data.filter((don) => don.status.toLowerCase() !== "accepted")
+        )
+      )
       .catch((err) => console.error("Error fetching incoming donations:", err))
       .finally(() => setLoading(false));
   }, []);
@@ -234,7 +238,7 @@ const DonationHistory = () => {
           <Text>
             {searchValue.trim().length > 0
               ? "No results matching your search"
-              : "No donation history found."}
+              : "No incoming donations found."}
           </Text>
         ) : (
           <Table variant={"simple"}>
