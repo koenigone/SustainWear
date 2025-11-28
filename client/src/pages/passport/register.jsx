@@ -28,15 +28,56 @@ export default function Register() {
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+  // validate front end form
+  const validateForm = () => {
+    const { first_name, last_name, email, password, confirmPassword } = form;
+
+    if (!first_name.trim() || !last_name.trim()) {
+      toast.error("First and last name are required");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => { // submit register form
+
+    if (!validateForm()) return; // stop if validation fails
+
     try {
       const res = await api.post("/register", form);
       toast.success(res.data.message);
       setTimeout(() => navigate("/login"), 1000);
     } catch (err) {
+      console.error("error 1", err);
+      console.error("error 2", err.response);
       toast.error(err.response?.data?.errMessage || "Something went wrong");
     }
   };
+
+  // disable submit button if any field is empty
+  const isFormInvalid =
+    !form.first_name ||
+    !form.last_name ||
+    !form.email ||
+    !form.password ||
+    !form.confirmPassword;
 
   return (
     <Center minH="100vh" bg="brand.beige">
@@ -87,7 +128,12 @@ export default function Register() {
             bg="white"
             color="black"
           />
-          <Button bg="white" color="brand.green" onClick={handleSubmit}>
+          <Button
+            bg="white"
+            color="brand.green"
+            onClick={handleSubmit}
+            isDisabled={isFormInvalid}
+          >
             Register
           </Button>
 

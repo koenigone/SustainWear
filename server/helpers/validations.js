@@ -1,110 +1,95 @@
-// validate registeration user input
+const { ERROR_CODES } = require("../../shared/errorMessages");
+
+// REGISTER VALIDATION
 const validateRegisterInput = ({ first_name, last_name, email, password, confirmPassword }) => {
   if (!first_name || !last_name || !email || !password || !confirmPassword)
-    return "All fields are required";
+    return { code: ERROR_CODES.ALL_FIELDS_REQUIRED };
 
   if (first_name.length < 2 || first_name.length > 25)
-    return "First name should be between 2 and 25 characters";
+    return { code: ERROR_CODES.FIRST_NAME_LENGTH };
 
   if (last_name.length < 2 || last_name.length > 25)
-    return "Last name should be between 2 and 25 characters";
+    return { code: ERROR_CODES.LAST_NAME_LENGTH };
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email))
-    return "Invalid email format";
+    return { code: ERROR_CODES.INVALID_EMAIL };
 
   if (password.length < 8)
-    return "Password must be at least 8 characters long";
+    return { code: ERROR_CODES.PASSWORD_TOO_SHORT };
 
   if (password !== confirmPassword)
-    return "Passwords do not match";
+    return { code: ERROR_CODES.PASSWORDS_DONT_MATCH };
 
-  return null; // valid
+  return null;
 };
 
-// validate two factor code input
+// TWO FACTOR VALIDATION
 const validateTwoFactorInput = ({ tempToken, code, record }) => {
   if (!tempToken || !code)
-    return "Missing verification data";
+    return { code: ERROR_CODES.INVALID_2FA_SESSION };
 
   if (!record)
-    return "Invalid or expired session";
+    return { code: ERROR_CODES.INVALID_2FA_SESSION };
 
   if (Date.now() > record.expires)
-    return "Code expired";
+    return { code: ERROR_CODES.CODE_EXPIRED };
 
   if (record.twoFactorCode !== code)
-    return "Incorrect code";
+    return { code: ERROR_CODES.INCORRECT_2FA_CODE };
 
-  return null; // valid
-}
+  return null;
+};
 
-const validateNameInputs = ({first_name, last_name}) => {
-  if (!first_name || !last_name) {
-    return "First and last name are required";
-  }
+// NAME UPDATE VALIDATION
+const validateNameInputs = ({ first_name, last_name }) => {
+  if (!first_name || !last_name)
+    return { code: ERROR_CODES.ALL_FIELDS_REQUIRED };
 
-  if (first_name.length < 2 || first_name.length > 25) {
-    return "First name must be between 2 and 25 characters";
-  }
+  if (first_name.length < 2 || first_name.length > 25)
+    return { code: ERROR_CODES.FIRST_NAME_LENGTH };
 
-  if (last_name.length < 2 || last_name.length > 25) {
-    return "Last name must be between 2 and 25 characters";
-  }
+  if (last_name.length < 2 || last_name.length > 25)
+    return { code: ERROR_CODES.LAST_NAME_LENGTH };
 
-  return null; // valid
-}
+  return null;
+};
 
+// PASSWORD RESET VALIDATION
 const validatePasswordResetInput = ({ token, newPassword, confirmPassword }) => {
   if (!token)
-    return "Token not found, please request another email";
+    return { code: ERROR_CODES.INVALID_2FA_SESSION };
 
   if (!newPassword || !confirmPassword)
-    return "All fields are required";
+    return { code: ERROR_CODES.ALL_FIELDS_REQUIRED };
 
   if (newPassword !== confirmPassword)
-    return "Passwords do not match";
+    return { code: ERROR_CODES.PASSWORDS_DONT_MATCH };
 
   if (newPassword.length < 8)
-    return "New password must be at least 8 characters long";
+    return { code: ERROR_CODES.PASSWORD_TOO_SHORT };
 
-  return null; // valid
-}
+  return null;
+};
 
-// validate organisation creation
+// ORGANISATION VALIDATION
 const validateOrganisationInput = ({ name, description, street_name, post_code, city, contact_email }) => {
-  if (!name || !description || !street_name || !post_code || !city || !contact_email) {
-    return "All fields are required";
-  }
+  if (!name || !description || !street_name || !post_code || !city || !contact_email)
+    return { code: ERROR_CODES.ALL_FIELDS_REQUIRED };
 
-  if (name.length < 4 || name.length > 35) {
-    return "Organisation name must be between 4 and 35 characters";
-  }
-
-  if (description.length < 4 || description.length > 99) {
-    return "Organisation description must be between 4 and 99 characters";
-  }
-
-  if (street_name.length < 2 || street_name.length > 30) {
-    return "Street name must be between 2 and 30 characters";
-  }
+  if (name.length < 4 || name.length > 35)
+    return { code: ERROR_CODES.INVALID_ORG_NAME };
 
   const postCodeRegex = /^[A-Za-z0-9\s-]{3,10}$/;
-  if (!postCodeRegex.test(post_code)) {
-    return "Invalid post code format";
-  }
-
-  if (city.length < 2 || city.length > 35) {
-    return "City name must be between 2 and 35 characters";
-  }
+  if (!postCodeRegex.test(post_code))
+    return { code: ERROR_CODES.INVALID_POST_CODE };
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(contact_email)) {
-    return "Invalid contact email format";
-  }
+  if (!emailRegex.test(contact_email))
+    return { code: ERROR_CODES.INVALID_EMAIL };
 
-  return null; // valid
-}
+  return null;
+};
 
 module.exports = {
   validateRegisterInput,
@@ -112,4 +97,4 @@ module.exports = {
   validateNameInputs,
   validatePasswordResetInput,
   validateOrganisationInput,
-}
+};
