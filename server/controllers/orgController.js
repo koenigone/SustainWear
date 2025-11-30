@@ -2,7 +2,6 @@ const db = require("../config/db");
 const { sendDonorNotification } = require("../helpers/donorNotifications");
 const { sendEmail } = require("../helpers/mailer");
 
-// GET STAFF'S ORGANISATION INFO
 const getStaffOrganisation = (user_id, callback) => {
   const staffOrgQuery = `
     SELECT O.org_id, O.name, OS.org_staff_id
@@ -13,7 +12,6 @@ const getStaffOrganisation = (user_id, callback) => {
   db.get(staffOrgQuery, [user_id], callback);
 };
 
-// GET ALL ACTIVE ORGANISATIONS
 const getActiveOrganisations = (req, res) => {
   const activeOrgsQuery = `
     SELECT 
@@ -38,7 +36,6 @@ const getActiveOrganisations = (req, res) => {
   });
 };
 
-// GET ALL DONATION REQUESTS
 const getAllDonationRequests = (req, res) => {
   const { org_id } = req.params;
 
@@ -67,7 +64,6 @@ const getAllDonationRequests = (req, res) => {
       });
     }
 
-    // used to check if photo_url is already a full URL
     const isURL = (value) => {
       try {
         new URL(value);
@@ -76,7 +72,7 @@ const getAllDonationRequests = (req, res) => {
         return false;
       }
     };
-    // modify photo_url to be full URL if not already
+
     const modifiedRows = rows.map((row) => {
       if (row.photo_url && !isURL(row.photo_url)) {
         return {
@@ -160,9 +156,38 @@ const updateDontationRequestStatus = (req, res) => {
   );
 };
 
+const getStaffActivity = (req, res) => {
+  const user_id = req.user.user_id;
+
+  const query = `
+    SELECT 
+      item_name,
+      old_status,
+      new_status,
+      change_reason,
+      changed_at,
+      (SELECT username FROM USER WHERE user_id = DT.handled_by_staff_id) AS staff_name
+    FROM DONATION_TRANSACTION_STATUS_LOG DT
+    WHERE DT.handled_by_staff_id = ?
+    ORDER BY changed_at DESC
+  `;
+
+  db.all(query, [user_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Database error while retrieving staff activity",
+        error: err.message,
+      });
+    }
+    return res.status(200).json(rows);
+  });
+};
+
 module.exports = {
   getStaffOrganisation,
   getActiveOrganisations,
   getAllDonationRequests,
   updateDontationRequestStatus,
+  getStaffActivity,
 };
+
