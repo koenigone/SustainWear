@@ -1,6 +1,9 @@
 const db = require("../config/db");
 const { sendDonorNotification } = require("../helpers/donorNotifications");
 const { sendEmail } = require("../helpers/mailer");
+const {
+  calculateSustainabilityImpact,
+} = require("../helpers/sustainabilityMetrics");
 
 // GET STAFF'S ORGANISATION INFO
 const getStaffOrganisation = (user_id, callback) => {
@@ -95,69 +98,248 @@ const updateDontationRequestStatus = (req, res) => {
   const { transaction_id } = req.params;
   const { status, handled_by_staff_id, reason } = req.body;
 
-  const updateStatusQuery = `
-    UPDATE DONATION_TRANSACTION
-    SET status = ?, handled_by_staff_id = ?, handled_at = CURRENT_TIMESTAMP, reason = ?
-    WHERE transaction_id = ?`;
+  if (!status) return res.status(400).json({ errMessage: "Status is required" });
+  if (!handled_by_staff_id) return res.status(400).json({ errMessage: "Missing staff handler ID" });
 
-  db.run(
-    updateStatusQuery,
-    [status, handled_by_staff_id, reason, transaction_id],
-    (err) => {
-      if (err) {
-        return res.status(500).json({
-          errMessage: "Database error while updating donation request status",
-          error: err.message,
-        });
-      }
+  // validate status
+  const allowedStatuses = ["Pending", "Accepted", "Declined", "Cancelled"];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ errMessage: "Invalid donation status" });
+  }
 
-      const userQuery = `SELECT user_id, email
-        FROM DONATION_TRANSACTION d
-        JOIN USER u ON u.user_id = d.donor_id
-        WHERE transaction_id = ?;`;
+  // require reason only for Declined or Cancelled
+  if ((status === "Declined" || status === "Cancelled") && !reason) {
+    return res.status(400).json({
+      errMessage:
+        "A reason is required when declining or cancelling a donation",
+    });
+  }
 
-      db.get(userQuery, [transaction_id], (userErr, userRow) => {
-        if (userErr) {
-          console.error("Error fetching user for notifications:", userErr);
-          return res.status(200).json({
-            message:
-              "Donation request status updated successfully but failed to fetch user for notifications",
-            changes: this.changes,
+  // validate staff existance
+  const staffCheckQuery = `
+    SELECT user_id 
+    FROM USER 
+    WHERE user_id = ? 
+      AND role IN ('Admin', 'Staff') 
+      AND is_active = 1
+  `;
+
+  db.get(staffCheckQuery, [handled_by_staff_id], (staffErr, staffRow) => {
+    if (staffErr) {
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: staffErr.message });
+    }
+
+    if (!staffRow) return res.status(400).json({ errMessage: "Invalid staff ID" });
+
+    // upddate donation transaction status
+    const updateStatusQuery = `
+      UPDATE DONATION_TRANSACTION
+      SET status = ?, 
+          handled_by_staff_id = ?, 
+          handled_at = CURRENT_TIMESTAMP, 
+          reason = ?
+      WHERE transaction_id = ?
+    `;
+
+    db.run(
+      updateStatusQuery,
+      [status, handled_by_staff_id, reason || null, transaction_id],
+      function (err) {
+        if (err) {
+          return res.status(500).json({
+            errMessage: "Database error while updating donation request status",
+            error: err.message,
           });
         }
 
-        try {
+        if (this.changes === 0) {
+          return res
+            .status(404)
+            .json({ errMessage: "Donation transaction not found" });
+        }
+
+        // insert sustainability metrics on acceptance
+        if (status === "Accepted") {
+          const fetchCategoryQuery = `
+            SELECT category 
+            FROM DONATION_TRANSACTION
+            WHERE transaction_id = ?
+          `;
+
+          db.get(fetchCategoryQuery, [transaction_id], (catErr, row) => {
+            if (!catErr && row) {
+              const impact = calculateSustainabilityImpact(row.category);
+
+              const updateImpactQuery = `
+                UPDATE DONATION_TRANSACTION
+                SET estimated_co2_saved = ?, 
+                    estimated_landfill_saved_kg = ?, 
+                    estimated_beneficiaries = ?
+                WHERE transaction_id = ?
+              `;
+
+              db.run(updateImpactQuery, [
+                impact.co2,
+                impact.landfill,
+                impact.beneficiaries,
+                transaction_id,
+              ]);
+            }
+          });
+        }
+
+        // fetch donor to send notification
+        const userQuery = `
+          SELECT u.user_id, u.email
+          FROM DONATION_TRANSACTION d
+          JOIN USER u ON u.user_id = d.donor_id
+          WHERE d.transaction_id = ?
+        `;
+
+        db.get(userQuery, [transaction_id], (userErr, userRow) => {
+          if (userErr || !userRow) {
+            console.error("Error fetching user for notifications:", userErr);
+            return res.status(200).json({
+              message: "Donation status updated, but failed to notify donor",
+            });
+          }
+
+          // format decline/cancel message
+          const fullMessage = `Your donation request (ID: ${transaction_id}) has been ${status}${
+            reason ? `. Reason: ${reason}.` : "."
+          }`;
+
+          // send email notification
           sendEmail(
             userRow.email,
             `Donation Request ${status}`,
-            `Your donation request (ID: ${transaction_id}) has been ${status} ${
-              reason ? ` Reason: ${reason}` : ""
-            }.`
-          );
-        } catch (emailErr) {
-          console.error("Error sending email notification:", emailErr);
-        }
+            fullMessage
+          ).catch((e) => console.error("Error sending email:", e));
 
-        try {
+          // send in app notification
           sendDonorNotification(
             userRow.user_id,
             `Donation Request ${status}`,
-            `Your donation request (ID: ${transaction_id}) has been ${status} ${
-              reason ? ` Reason: ${reason}` : ""
-            }.`,
+            fullMessage,
             transaction_id
           );
-        } catch (notifErr) {
-          console.error("Error sending donor notification:", notifErr);
-        }
 
-        return res.status(200).json({
-          message: "Donation request status updated successfully",
-          changes: this.changes,
+          return res.status(200).json({
+            message: "Donation request status updated successfully",
+          });
         });
+      }
+    );
+  });
+};
+
+// SUMMARY METRIC
+const getOrgMetricsSummary = (req, res) => {
+  const { org_id } = req.params;
+
+  const metricsQuery = `
+    SELECT
+      COUNT(*) AS total_donations,
+      SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) AS accepted,
+      SUM(CASE WHEN status = 'Declined' THEN 1 ELSE 0 END) AS declined,
+      SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
+      SUM(estimated_co2_saved) AS total_co2_saved,
+      SUM(estimated_landfill_saved_kg) AS total_landfill_saved,
+      SUM(estimated_beneficiaries) AS total_beneficiaries
+    FROM DONATION_TRANSACTION
+    WHERE org_id = ?
+  `;
+
+  db.get(metricsQuery, [org_id], (err, row) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to load organisation metrics",
+        error: err.message,
       });
     }
-  );
+
+    return res.status(200).json(row);
+  });
+};
+
+// MONTHLY TREND METRIC
+const getOrgMonthlyTrend = (req, res) => {
+  const { org_id } = req.params;
+
+  const metricsQuery = `
+    SELECT
+      strftime('%Y-%m', submitted_at) AS month,
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) AS accepted
+    FROM DONATION_TRANSACTION
+    WHERE org_id = ?
+    GROUP BY month
+    ORDER BY month ASC
+  `;
+
+  db.all(metricsQuery, [org_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to load monthly trend",
+        error: err.message,
+      });
+    }
+
+    return res.status(200).json(rows);
+  });
+};
+
+// BREAKDOWN METRIC
+const getOrgCategoryBreakdown = (req, res) => {
+  const { org_id } = req.params;
+
+  const metricsQuery = `
+    SELECT category, COUNT(*) AS total
+    FROM DONATION_TRANSACTION
+    WHERE org_id = ?
+    GROUP BY category
+    ORDER BY total DESC
+  `;
+
+  db.all(metricsQuery, [org_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to load category breakdown",
+        error: err.message,
+      });
+    }
+
+    res.status(200).json(rows);
+  });
+};
+
+// HANDLING TIME METRIC
+const getOrgHandlingTime = (req, res) => {
+  const { org_id } = req.params;
+
+  const metricsQuery = `
+    SELECT
+      AVG(
+        (julianday(handled_at) - julianday(submitted_at)) * 24
+      ) AS avg_hours
+    FROM DONATION_TRANSACTION
+    WHERE org_id = ?
+      AND handled_at IS NOT NULL
+  `;
+
+  db.get(metricsQuery, [org_id], (err, row) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to load handling time",
+        error: err.message,
+      });
+    }
+
+    res.status(200).json(row);
+  });
 };
 
 module.exports = {
@@ -165,4 +347,8 @@ module.exports = {
   getActiveOrganisations,
   getAllDonationRequests,
   updateDontationRequestStatus,
+  getOrgMetricsSummary,
+  getOrgMonthlyTrend,
+  getOrgCategoryBreakdown,
+  getOrgHandlingTime,
 };

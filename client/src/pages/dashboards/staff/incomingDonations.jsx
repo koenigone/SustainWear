@@ -32,6 +32,7 @@ const DonationHistory = () => {
   const [searchValue, setSearchValue] = useState("");
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const { organisation } = useAuth();
+  const { user } = useAuth();
 
   // toggles the visibility of an expanded rowe
   const toggleIndex = (index) =>
@@ -114,9 +115,7 @@ const DonationHistory = () => {
     api
       .get(`/orgs/${organisation?.org_id}/donation-requests`)
       .then((res) =>
-        setDonations(
-          res.data.filter((don) => don.status.toLowerCase() !== "accepted")
-        )
+        setDonations(res.data.filter((don) => don.status === "Pending"))
       )
       .catch((err) => console.error("Error fetching incoming donations:", err))
       .finally(() => setLoading(false));
@@ -167,9 +166,11 @@ const DonationHistory = () => {
     console.log("With reason:", statusChangeReason);
     console.log("For item with key:", searchKey);
     try {
-      if (!statusChangeReason || statusChangeReason.trim().length === 0) {
-        toast.error("Please provide a reason for this status change.");
-        return;
+      if (newStatus === "Declined" || newStatus === "Cancelled") {
+        if (!statusChangeReason || statusChangeReason.trim().length === 0) {
+          toast.error("Please provide a reason for this action.");
+          return;
+        }
       }
 
       const [itemName, itemCatergory, itemStatusOld, itemSubmitted] =
@@ -195,7 +196,7 @@ const DonationHistory = () => {
       api
         .post(`/orgs/${transaction_id}/donation-request-update`, {
           status: newStatus,
-          handled_by_staff_id: organisation.org_staff_id,
+          handled_by_staff_id: user.user_id,
           reason: statusChangeReason,
         })
         .then((res) => {

@@ -260,9 +260,88 @@ const generateDonationDescription = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       errMessage: "Failed to generate description",
-      debug: err?.message || err
+      debug: err?.message || err,
     });
   }
+};
+
+// DONOR METRICS
+const getDonorMetrics = (req, res) => {
+  const { donor_id } = req.params;
+
+  if (!donor_id) return res.status(400).json({ errMessage: "Missing donor ID" });
+
+  const queries = {
+    co2OverTime: `
+      SELECT DATE(submitted_at) AS date, 
+             SUM(estimated_co2_saved) AS total_co2
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ? AND status = 'Accepted'
+      GROUP BY DATE(submitted_at)
+      ORDER BY DATE(submitted_at)
+    `,
+    landfillOverTime: `
+      SELECT DATE(submitted_at) AS date, 
+             SUM(estimated_landfill_saved_kg) AS total_landfill
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ? AND status = 'Accepted'
+      GROUP BY DATE(submitted_at)
+      ORDER BY DATE(submitted_at)
+    `,
+    beneficiariesOverTime: `
+      SELECT DATE(submitted_at) AS date, 
+             SUM(estimated_beneficiaries) AS total_beneficiaries
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ? AND status = 'Accepted'
+      GROUP BY DATE(submitted_at)
+      ORDER BY DATE(submitted_at)
+    `,
+    categoryBreakdown: `
+      SELECT category, COUNT(*) AS total
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ?
+      GROUP BY category
+    `,
+    statusBreakdown: `
+      SELECT status, COUNT(*) AS total
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ?
+      GROUP BY status
+    `,
+    monthlyActivity: `
+      SELECT strftime('%Y-%m', submitted_at) AS month, 
+             COUNT(*) AS total
+      FROM DONATION_TRANSACTION
+      WHERE donor_id = ?
+      GROUP BY month
+      ORDER BY month
+    `,
+  };
+
+  const results = {};
+
+  const keys = Object.keys(queries);
+
+  let completed = 0;
+
+  keys.forEach((metric) => {
+    db.all(queries[metric], [donor_id], (err, rows) => {
+      if (err) {
+        console.error(`Query error for ${metric}:`, err);
+        return res.status(500).json({
+          errMessage: `Error generating ${metric}`,
+          error: err.message,
+        });
+      }
+
+      results[metric] = rows;
+      completed++;
+
+      if (completed === keys.length) {
+        res.status(200).json(results);
+      }
+    });
+  });
 };
 
 module.exports = {
@@ -272,4 +351,5 @@ module.exports = {
   markAllRead,
   getDonationHistory,
   generateDonationDescription,
+  getDonorMetrics,
 };
