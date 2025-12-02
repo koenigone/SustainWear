@@ -166,7 +166,7 @@ const DonationHistory = () => {
     console.log("With reason:", statusChangeReason);
     console.log("For item with key:", searchKey);
     try {
-      if (newStatus === "Declined" || newStatus === "Cancelled") {
+      if (newStatus === "Declined") {
         if (!statusChangeReason || statusChangeReason.trim().length === 0) {
           toast.error("Please provide a reason for this action.");
           return;
@@ -225,9 +225,6 @@ const DonationHistory = () => {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>
-        Incoming Donations For {organisation?.org_name}
-      </Heading>
       <VStack>
         <Input
           placeholder="Search..."
@@ -336,16 +333,6 @@ const DonationHistory = () => {
                                   bg={"red.200"}
                                 >
                                   Decline
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    updateDonationStatus(
-                                      row.slice(0, 4).join("+"),
-                                      "Cancelled"
-                                    )
-                                  }
-                                >
-                                  Cancel
                                 </Button>
                                 <Input
                                   placeholder="Reason for decline/cancel"

@@ -1,19 +1,17 @@
 import {
   Box,
   Button,
-
   FormControl,
   FormLabel,
   Input,
   Select,
   Textarea,
-  Text,
   Image,
   VStack,
   useToast,
 } from "@chakra-ui/react";
 import { IoSparkles } from "react-icons/io5";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../../../api/axiosClient";
 
 export default function DonateItem() {
@@ -28,6 +26,7 @@ export default function DonateItem() {
     size: "",
     gender: "",
   });
+  const fileInputRef = useRef(null); // empty photo field
 
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -60,12 +59,15 @@ export default function DonateItem() {
 
   // fetch organisations on load
   useEffect(() => {
-    api.get("/orgs/active")
-      .then(res => setOrganisations(res.data))
-      .catch(() => toast({
-        status: "error",
-        title: "Failed to load organisations"
-      }));
+    api
+      .get("/orgs/active")
+      .then((res) => setOrganisations(res.data))
+      .catch(() =>
+        toast({
+          status: "error",
+          title: "Failed to load organisations",
+        })
+      );
   }, []);
 
   const handleGenerateDescription = async () => {
@@ -73,7 +75,7 @@ export default function DonateItem() {
       toast({
         status: "error",
         title: "Missing information",
-        description: "Please enter name, category and condition first."
+        description: "Please enter name, category and condition first.",
       });
       return;
     }
@@ -89,9 +91,9 @@ export default function DonateItem() {
         gender: form.gender,
       });
 
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
-        description: res.data.description
+        description: res.data.description,
       }));
 
       toast({ status: "success", title: "Description generated!" });
@@ -99,7 +101,8 @@ export default function DonateItem() {
       toast({
         status: "error",
         title: "AI Error",
-        description: err.response?.data?.errMessage || "Failed to generate description",
+        description:
+          err.response?.data?.errMessage || "Failed to generate description",
       });
     } finally {
       setIsGenerating(false);
@@ -159,6 +162,10 @@ export default function DonateItem() {
       });
       setPreview(null);
       setImageFile(null);
+
+      if (fileInputRef.current) { // clear photo input on successful submission
+        fileInputRef.current.value = "";
+      }
     } catch (err) {
       toast({
         status: "error",
@@ -171,13 +178,16 @@ export default function DonateItem() {
   };
 
   return (
-    <Box bg="white" p={6} rounded="lg" boxShadow="md" maxW="600px" mx="auto" mt={6}>
-      <Text fontSize="2xl" fontWeight="bold" mb={4} color="green.600">
-        Donate an Item
-      </Text>
-
+    <Box
+      bg="white"
+      p={6}
+      rounded="lg"
+      boxShadow="md"
+      maxW="120vh"
+      mx="auto"
+      mt={6}
+    >
       <VStack spacing={4} align="stretch">
-
         {/* Organisation */}
         <FormControl>
           <FormLabel>Donate To</FormLabel>
@@ -194,13 +204,13 @@ export default function DonateItem() {
             sx={{
               "> option": {
                 background: "white",
-                color: "black"
+                color: "black",
               },
               "& .chakra-select__field": {
                 background: "white !important",
                 color: "black !important",
                 borderColor: "brand.green !important",
-              }
+              },
             }}
           >
             {organisations.map((org) => (
@@ -286,13 +296,13 @@ export default function DonateItem() {
             sx={{
               "> option": {
                 background: "white",
-                color: "black"
+                color: "black",
               },
               "& .chakra-select__field": {
                 background: "white !important",
                 color: "black !important",
                 borderColor: "brand.green !important",
-              }
+              },
             }}
           >
             <option value="T-Shirt">T-Shirt</option>
@@ -320,13 +330,13 @@ export default function DonateItem() {
             sx={{
               "> option": {
                 background: "white",
-                color: "black"
+                color: "black",
               },
               "& .chakra-select__field": {
                 background: "white !important",
                 color: "black !important",
                 borderColor: "brand.green !important",
-              }
+              },
             }}
           >
             <option>Brand New</option>
@@ -353,18 +363,20 @@ export default function DonateItem() {
             sx={{
               "> option": {
                 background: "white",
-                color: "black"
+                color: "black",
               },
               "& .chakra-select__field": {
                 background: "white !important",
                 color: "black !important",
                 borderColor: "brand.green !important",
-              }
+              },
             }}
           >
-            {["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
+            {["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"].map(
+              (s) => (
+                <option key={s}>{s}</option>
+              )
+            )}
           </Select>
         </FormControl>
 
@@ -384,13 +396,13 @@ export default function DonateItem() {
             sx={{
               "> option": {
                 background: "white",
-                color: "black"
+                color: "black",
               },
               "& .chakra-select__field": {
                 background: "white !important",
                 color: "black !important",
                 borderColor: "brand.green !important",
-              }
+              },
             }}
           >
             <option>Male</option>
@@ -401,7 +413,12 @@ export default function DonateItem() {
         {/* Upload Image */}
         <FormControl>
           <FormLabel>Upload Image</FormLabel>
-          <Input type="file" accept="image/*" onChange={handleImage} />
+          <Input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImage}
+          />
 
           {preview && (
             <Image

@@ -11,7 +11,6 @@ import {
   Button,
   Input,
   HStack,
-  Heading,
   Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -97,7 +96,9 @@ export default function ManageOrganisations() {
       fetchOrganisations();
       setNewOrg(initialOrgData);
     } catch (err) {
-      toast.error(err.response?.data?.errMessage || "Failed to create organisation");
+      toast.error(
+        err.response?.data?.errMessage || "Failed to create organisation"
+      );
     }
   };
 
@@ -119,7 +120,8 @@ export default function ManageOrganisations() {
       });
 
       toast.success(
-        `Organisation "${orgToToggle.name}" ${orgToToggle.is_active ? "deactivated" : "activated"
+        `Organisation "${orgToToggle.name}" ${
+          orgToToggle.is_active ? "deactivated" : "activated"
         }`
       );
 
@@ -216,20 +218,17 @@ export default function ManageOrganisations() {
   return (
     <Box p={6} bg="white" rounded="lg" boxShadow="md">
       <HStack justify="space-between" mb={4}>
-        <Heading size="md">Manage Organisations</Heading>
+        <Input
+          placeholder="Search by name, city, or email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          bg="gray.50"
+          borderColor="gray.300"
+        />
         <Button colorScheme="green" onClick={addModal.onOpen}>
           Add Organisation
         </Button>
       </HStack>
-
-      <Input
-        placeholder="Search by name, city, or email..."
-        mb={4}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        bg="gray.50"
-        borderColor="gray.300"
-      />
 
       <Table variant="simple">
         <Thead>
@@ -266,7 +265,10 @@ export default function ManageOrganisations() {
 
                 <Td>{org.contact_email}</Td>
 
-                <Td color={org.is_active ? "green.500" : "red.500"} fontWeight="bold">
+                <Td
+                  color={org.is_active ? "green.500" : "red.500"}
+                  fontWeight="bold"
+                >
                   {org.is_active ? "Active" : "Inactive"}
                 </Td>
 

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const { adminAuditLogger } = require("../helpers/adminAuditLogger");
 const { validateOrganisationInput } = require("../helpers/validations");
+const { Parser } = require("json2csv");
 
 // UPDATE USER ROLE (Admin only)
 const updateUser = (req, res) => {
@@ -22,15 +23,22 @@ const updateUser = (req, res) => {
   const checkUserQuery = `SELECT role, is_active FROM USER WHERE user_id = ?`;
 
   db.get(checkUserQuery, [user_id], (err, user) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
     if (!user) return res.status(404).json({ errMessage: "User not found" });
 
     if (user.role === "Admin" && normalizedStatus === 0) {
-      return res.status(403).json({ errMessage: "You cannot deactivate another admin." });
+      return res
+        .status(403)
+        .json({ errMessage: "You cannot deactivate another admin." });
     }
 
     if (user.role === "Admin" && role === "Donor") {
-      return res.status(403).json({ errMessage: "You cannot demote another admin." });
+      return res
+        .status(403)
+        .json({ errMessage: "You cannot demote another admin." });
     }
 
     // continue with updating
@@ -38,10 +46,12 @@ const updateUser = (req, res) => {
     let params;
 
     if (normalizedStatus === 0) {
-      updateQuery = "UPDATE USER SET role = ?, is_active = 0, deactivation_type = 'ADMIN' WHERE user_id = ?";
+      updateQuery =
+        "UPDATE USER SET role = ?, is_active = 0, deactivation_type = 'ADMIN' WHERE user_id = ?";
       params = [role, user_id];
     } else {
-      updateQuery = "UPDATE USER SET role = ?, is_active = 1, deactivation_type = NULL WHERE user_id = ?";
+      updateQuery =
+        "UPDATE USER SET role = ?, is_active = 1, deactivation_type = NULL WHERE user_id = ?";
       params = [role, user_id];
     }
 
@@ -64,7 +74,8 @@ const updateUser = (req, res) => {
       }
 
       // action: Promotion
-      if (role === "Admin" && user.role !== "Admin") action = "Promoted user to Admin";
+      if (role === "Admin" && user.role !== "Admin")
+        action = "Promoted user to Admin";
 
       adminAuditLogger(admin_id, action, user_id); // add action to admin log
 
@@ -78,7 +89,10 @@ const getAllUsers = (req, res) => {
   const query = `SELECT user_id, first_name, last_name, email, role, is_active FROM USER`;
 
   db.all(query, [], (err, rows) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
     res.status(200).json(rows);
   });
 };
@@ -86,22 +100,29 @@ const getAllUsers = (req, res) => {
 // ADD NEW ORGANISATION
 const addOrganisation = (req, res) => {
   const admin_id = req.user?.id;
-  const { name, description, street_name, post_code, city, contact_email } = req.body;
+  const { name, description, street_name, post_code, city, contact_email } =
+    req.body;
 
   const validationError = validateOrganisationInput(req.body);
-  if (validationError) return res.status(400).json({ errMessage: validationError });
+  if (validationError)
+    return res.status(400).json({ errMessage: validationError });
 
   const query = `
     INSERT INTO ORGANISATION (name, description, street_name, post_code, city, contact_email)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.run(query, [name, description, street_name, post_code, city, contact_email],
+  db.run(
+    query,
+    [name, description, street_name, post_code, city, contact_email],
     (err) => {
       if (err) {
-        if (err.message.includes("UNIQUE constraint failed: ORGANISATION.name")) {
+        if (
+          err.message.includes("UNIQUE constraint failed: ORGANISATION.name")
+        ) {
           return res.status(400).json({
-            errMessage: "An organisation with this name already exists. Please choose a different name.",
+            errMessage:
+              "An organisation with this name already exists. Please choose a different name.",
           });
         }
 
@@ -128,7 +149,10 @@ const getAllOrganisations = (req, res) => {
   const query = `SELECT * FROM ORGANISATION ORDER BY created_at DESC`;
 
   db.all(query, [], (err, rows) => {
-    if (err) return res.status(500).json({ errMessage: "Database error", error: err.message });
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
     res.status(200).json(rows);
   });
 };
@@ -145,12 +169,19 @@ const updateOrganisationStatus = (req, res) => {
 
   db.run(query, [is_active ? 1 : 0, org_id], (err) => {
     if (err)
-      return res.status(500).json({ errMessage: "Failed to update organisation", error: err.message });
+      return res.status(500).json({
+        errMessage: "Failed to update organisation",
+        error: err.message,
+      });
 
-    const action = is_active ? "Organisation activated" : "Organisation deactivated";
+    const action = is_active
+      ? "Organisation activated"
+      : "Organisation deactivated";
     adminAuditLogger(admin_id, action, null, org_id); // add action to admin log
 
-    res.status(200).json({ message: "Organisation status updated successfully" });
+    res
+      .status(200)
+      .json({ message: "Organisation status updated successfully" });
   });
 };
 
@@ -162,7 +193,10 @@ const deleteOrganisation = (req, res) => {
 
   db.run(query, [id], (err) => {
     if (err)
-      return res.status(500).json({ errMessage: "Failed to delete organisation", error: err.message });
+      return res.status(500).json({
+        errMessage: "Failed to delete organisation",
+        error: err.message,
+      });
 
     const action = "Organisation deleted";
     adminAuditLogger(admin_id, action, null, id); // add action to admin log
@@ -225,11 +259,15 @@ const addStaffToOrganisation = (req, res) => {
 
     if (!user) return res.status(404).json({ errMessage: "User not found" });
 
-    if (user.role === "Admin") // prevent adding admins as staff
-      return res.status(400).json({ errMessage: "Admins cannot be assigned as staff" });
+    if (user.role === "Admin")
+      // prevent adding admins as staff
+      return res
+        .status(400)
+        .json({ errMessage: "Admins cannot be assigned as staff" });
 
     // prevent hiring user already staff of any org
-    const checkStaffQuery = "SELECT * FROM ORGANISATION_STAFF WHERE user_id = ?";
+    const checkStaffQuery =
+      "SELECT * FROM ORGANISATION_STAFF WHERE user_id = ?";
 
     db.get(checkStaffQuery, [user.user_id], (err2, existing) => {
       if (err2) return res.status(500).json({ errMessage: "Database error" });
@@ -240,14 +278,16 @@ const addStaffToOrganisation = (req, res) => {
         });
 
       // add staff record
-      const addUserQuery = "INSERT INTO ORGANISATION_STAFF (org_id, user_id) VALUES (?, ?)";
+      const addUserQuery =
+        "INSERT INTO ORGANISATION_STAFF (org_id, user_id) VALUES (?, ?)";
 
       db.run(addUserQuery, [org_id, user.user_id], function (err3) {
         if (err3) return res.status(500).json({ errMessage: "Database error" });
 
         // change user role to Staff only if donor
         if (user.role === "Donor") {
-          const updateRoleQuery = "UPDATE USER SET role = 'Staff' WHERE user_id = ?";
+          const updateRoleQuery =
+            "UPDATE USER SET role = 'Staff' WHERE user_id = ?";
           db.run(updateRoleQuery, [user.user_id]);
         }
 
@@ -299,37 +339,256 @@ const toggleOrganisationStaff = (req, res) => {
     WHERE org_id = ? AND user_id = ?
   `;
 
-  db.run(query, [is_active ? 1 : 0, is_active ? 1 : 0, org_id, user_id], function (err) {
-    if (err) return res.status(500).json({ errMessage: "Database error" });
+  db.run(
+    query,
+    [is_active ? 1 : 0, is_active ? 1 : 0, org_id, user_id],
+    function (err) {
+      if (err) return res.status(500).json({ errMessage: "Database error" });
 
-    if (this.changes === 0)
-      return res.status(404).json({ errMessage: "Staff not found in this organisation" });
+      if (this.changes === 0)
+        return res
+          .status(404)
+          .json({ errMessage: "Staff not found in this organisation" });
 
-    res.status(200).json({
-      message: is_active ? "Staff activated" : "Staff deactivated",
-    });
-  });
+      res.status(200).json({
+        message: is_active ? "Staff activated" : "Staff deactivated",
+      });
+    }
+  );
 };
 
 // REMOVE STAFF MEMBER FROM ORGANISATION
 const removeOrganisationStaff = (req, res) => {
   const { org_id, user_id } = req.params;
 
-  const deleteQuery = "DELETE FROM ORGANISATION_STAFF WHERE org_id = ? AND user_id = ?";
+  const deleteQuery =
+    "DELETE FROM ORGANISATION_STAFF WHERE org_id = ? AND user_id = ?";
 
   db.run(deleteQuery, [org_id, user_id], function (err) {
     if (err) return res.status(500).json({ errMessage: "Database error" });
-    if (this.changes === 0) return res.status(404).json({ errMessage: "Staff not found" });
+    if (this.changes === 0)
+      return res.status(404).json({ errMessage: "Staff not found" });
 
     // revert role: Staff -> Donor
     const updateRoleQuery = `UPDATE USER SET role = 'Donor' WHERE user_id = ?`;
 
     db.run(updateRoleQuery, [user_id], (err2) => {
       if (err2)
-        return res.status(500).json({ errMessage: "Failed to revert user role" });
+        return res
+          .status(500)
+          .json({ errMessage: "Failed to revert user role" });
 
-      return res.status(200).json({ message: "Staff removed and role reverted to Donor" });
+      return res
+        .status(200)
+        .json({ message: "Staff removed and role reverted to Donor" });
     });
+  });
+};
+
+// TOTAL SYSTEM SUMMARY
+const getSystemSummary = (req, res) => {
+  const q = `
+      SELECT 
+        (SELECT COUNT(*) FROM DONATION_TRANSACTION) AS total_donations,
+        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Accepted') AS accepted,
+        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Declined') AS declined,
+        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Cancelled') AS cancelled,
+        (SELECT COUNT(*) FROM USER) AS total_users,
+        (SELECT COUNT(*) FROM ORGANISATION) AS total_organisations,
+        (SELECT SUM(estimated_co2_saved) FROM DONATION_TRANSACTION) AS total_co2,
+        (SELECT SUM(estimated_landfill_saved_kg) FROM DONATION_TRANSACTION) AS total_landfill,
+        (SELECT SUM(estimated_beneficiaries) FROM DONATION_TRANSACTION) AS total_beneficiaries
+    `;
+
+  db.get(q, [], (err, row) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(row);
+  });
+};
+
+// MONTHLY TREND
+const getMonthlyTrend = (req, res) => {
+  const q = `
+      SELECT strftime('%Y-%m', submitted_at) AS month,
+             COUNT(*) AS count
+      FROM DONATION_TRANSACTION
+      GROUP BY month
+      ORDER BY month ASC
+    `;
+
+  db.all(q, [], (err, rows) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(rows);
+  });
+};
+
+// CATEGORY BREAKDOWN
+const getCategoryBreakdown = (req, res) => {
+  const q = `
+      SELECT category, COUNT(*) AS count
+      FROM DONATION_TRANSACTION
+      GROUP BY category
+    `;
+
+  db.all(q, [], (err, rows) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(rows);
+  });
+};
+
+// STATUS BREAKDOWN
+const getStatusBreakdown = (req, res) => {
+  const q = `
+      SELECT status, COUNT(*) AS count
+      FROM DONATION_TRANSACTION
+      GROUP BY status
+    `;
+
+  db.all(q, [], (err, rows) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(rows);
+  });
+};
+
+// ORGANISATION PERFORMANCE
+const getOrgPerformance = (req, res) => {
+  const q = `
+      SELECT 
+        o.org_id,
+        o.name,
+        COUNT(d.transaction_id) AS handled_count,
+        SUM(d.estimated_co2_saved) AS co2,
+        SUM(d.estimated_beneficiaries) AS beneficiaries,
+        AVG(
+          julianday(d.handled_at) - julianday(d.submitted_at)
+        ) * 24 AS avg_handling_hours
+      FROM ORGANISATION o
+      LEFT JOIN DONATION_TRANSACTION d ON o.org_id = d.org_id
+      GROUP BY o.org_id
+      ORDER BY handled_count DESC
+    `;
+
+  db.all(q, [], (err, rows) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(rows);
+  });
+};
+
+// USER ACTIVITY
+const getUserActivity = (req, res) => {
+  const q = `
+      SELECT role, COUNT(*) AS count
+      FROM USER
+      GROUP BY role
+    `;
+
+  db.all(q, [], (err, rows) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(rows);
+  });
+};
+
+const getSustainabilityTotal = (req, res) => {
+  const q = `
+      SELECT 
+        SUM(estimated_co2_saved) AS total_co2,
+        SUM(estimated_landfill_saved_kg) AS total_landfill,
+        SUM(estimated_beneficiaries) AS total_beneficiaries
+      FROM DONATION_TRANSACTION
+      WHERE status='Accepted'
+    `;
+
+  db.get(q, [], (err, row) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ errMessage: "DB error", error: err.message });
+    res.json(row);
+  });
+};
+
+// Helper to export CSV
+function sendCSV(res, filename, rows) {
+  const parser = new Parser();
+  const csv = parser.parse(rows);
+
+  res.header("Content-Type", "text/csv");
+  res.attachment(filename);
+  return res.send(csv);
+}
+
+const generateAdminReport = (req, res) => {
+  const { type } = req.params;
+
+  let query = "";
+
+  switch (type) {
+    case "monthly":
+      query = `
+        SELECT strftime('%Y-%m', submitted_at) AS month, COUNT(*) AS count
+        FROM DONATION_TRANSACTION
+        GROUP BY month
+      `;
+      break;
+
+    case "organisations":
+      query = `
+        SELECT o.org_name, COUNT(*) AS accepted
+        FROM DONATION_TRANSACTION d
+        JOIN ORGANISATION o ON o.org_id = d.org_id
+        WHERE d.status = 'Accepted'
+        GROUP BY o.org_id
+      `;
+      break;
+
+    case "sustainability":
+      query = `
+        SELECT 
+          SUM(estimated_co2_saved) AS total_co2,
+          SUM(estimated_landfill_saved_kg) AS total_landfill,
+          SUM(estimated_beneficiaries) AS total_beneficiaries
+        FROM DONATION_TRANSACTION
+      `;
+      break;
+
+    case "users":
+      query = `
+        SELECT role, COUNT(*) AS count
+        FROM USER
+        GROUP BY role
+      `;
+      break;
+
+    default:
+      return res.status(400).json({ errMessage: "Invalid report type" });
+  }
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ errMessage: "Database error", error: err.message });
+    }
+
+    return sendCSV(res, `${type}_report.csv`, rows);
   });
 };
 
@@ -345,4 +604,12 @@ module.exports = {
   getOrganisationStaff,
   toggleOrganisationStaff,
   removeOrganisationStaff,
+  getSystemSummary,
+  getMonthlyTrend,
+  getCategoryBreakdown,
+  getStatusBreakdown,
+  getOrgPerformance,
+  getUserActivity,
+  getSustainabilityTotal,
+  generateAdminReport,
 };

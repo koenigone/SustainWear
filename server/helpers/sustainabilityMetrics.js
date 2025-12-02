@@ -1,4 +1,5 @@
-const CO2_VALUES = {
+// CATEGORY EMISSIONS
+const CATEGORY_CO2 = {
   "T-shirt": 2.1,
   "Shirt": 2.1,
   "Hoodie": 6.5,
@@ -9,17 +10,29 @@ const CO2_VALUES = {
   "Dress": 4.2,
   "Skirt": 4.2,
   "Shoes": 10.0,
-  "Other": 3.0,
 };
 
-const LANDFILL_PER_ITEM_KG = 0.8;
+const DEFAULT_CO2 = 3.0; // fallback for new categories
 
-function calculateSustainabilityImpact(category) {
-  const co2 = CO2_VALUES[category] || CO2_VALUES["Other"];
-  const landfill = LANDFILL_PER_ITEM_KG;
-  const beneficiaries = 1;
+// LANDFILL IMPACT
+const LANDFILL_KG_PER_ITEM = 0.8;
 
-  return { co2, landfill, beneficiaries };
+// BENEFICIARY MODEL
+const BENEFICIARIES_PER_ITEM = 1;
+
+// MAIN CALCULATOR
+function calculateSustainabilityImpact(category, quantity = 1) {
+  const baseCO2 = CATEGORY_CO2[category] || DEFAULT_CO2;
+
+  const co2_saved = baseCO2 * quantity;
+  const landfill_saved = LANDFILL_KG_PER_ITEM * quantity;
+  const beneficiaries = BENEFICIARIES_PER_ITEM * quantity;
+
+  return {
+    co2_saved,
+    landfill_saved,
+    beneficiaries
+  };
 }
 
 module.exports = { calculateSustainabilityImpact };

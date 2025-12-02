@@ -122,9 +122,6 @@ export default function AdminLog() {
 
   return (
     <Box p={6} bg="white" rounded="lg" boxShadow="md">
-      <Heading size="md" mb={4}>
-        Admin Activity Log
-      </Heading>
 
       <Table variant="simple">
         <Thead>

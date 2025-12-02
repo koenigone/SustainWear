@@ -11,7 +11,6 @@ import {
   Tbody,
   Td,
   Tooltip,
-  Heading,
   Image,
   SimpleGrid,
   Input,
@@ -155,9 +154,6 @@ const DonationHistory = () => {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>
-        Donation History
-      </Heading>
       <VStack>
         <Input
           placeholder="Search..."

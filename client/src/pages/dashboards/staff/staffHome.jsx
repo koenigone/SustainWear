@@ -3,13 +3,12 @@ import { Box, Heading, SimpleGrid, Spinner } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 
-// organisation charts
-import OrgMonthlyTrendChart from "../../../components/charts/orgCharts/monthlyTrendChart";
-import OrgCategoryChart from "../../../components/charts/orgCharts/orgCategoryChart";
-import OrgStatusChart from "../../../components/charts/orgCharts/orgStatusChart";
-import OrgCO2Chart from "../../../components/charts/orgCharts/orgCO2Chart";
-import OrgLandfillChart from "../../../components/charts/orgCharts/orgLandfillChart";
-import OrgHandlingTimeChart from "../../../components/charts/orgCharts/orgHandlingTimeChart";
+// reusable charts
+import LineChartComp from "../../../components/charts/lineChartCO2";
+import AreaChartComp from "../../../components/charts/areaChartLS";
+import BarChartComp from "../../../components/charts/barChartBeneficiaries";
+import DoughnutChartComp from "../../../components/charts/doughnutChartSB";
+import ComposedChartComp from "../../../components/charts/composedChartMA";
 
 export default function OrganisationHome() {
   const { organisation } = useAuth();
@@ -49,31 +48,77 @@ export default function OrganisationHome() {
   }, [organisation]);
 
   if (loading) return <Spinner size="xl" mt={10} />;
+  if (!summary) return null;
 
   return (
     <Box>
-      <Heading size="lg" mb={5}>
-        Organisation Dashboard {organisation?.org_name}
-      </Heading>
-
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        {/* monthly donations trend */}
-        <OrgMonthlyTrendChart data={monthly} />
+        {/* Monthly donation trend */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            Monthly Donation Trend
+          </Heading>
+          <LineChartComp data={monthly} xKey="month" dataKey="total" />
+        </Box>
 
-        {/* category breakdown */}
-        <OrgCategoryChart data={categories} />
+        {/* Category breakdown */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            Category Breakdown
+          </Heading>
+          <BarChartComp data={categories} xKey="category" dataKey="total" />
+        </Box>
 
-        {/* status breakdown */}
-        <OrgStatusChart data={summary} />
+        {/* Status breakdown */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            Donation Status Overview
+          </Heading>
+          <DoughnutChartComp
+            data={[
+              { status: "Accepted", total: summary.accepted },
+              { status: "Declined", total: summary.declined },
+              { status: "Pending", total: summary.pending },
+              { status: "Cancelled", total: summary.cancelled },
+            ]}
+            dataKey="total"
+          />
+        </Box>
 
-        {/* CO2 saved */}
-        <OrgCO2Chart data={summary} />
+        {/* CO₂ saved */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            CO₂ Saved (kg)
+          </Heading>
+          <AreaChartComp
+            data={[{ date: "Total", value: summary.total_co2_saved }]}
+            xKey="date"
+            dataKey="value"
+          />
+        </Box>
 
-        {/* landfill saved */}
-        <OrgLandfillChart data={summary} />
+        {/* Landfill saved */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            Landfill Weight Saved (kg)
+          </Heading>
+          <AreaChartComp
+            data={[{ date: "Total", value: summary.total_landfill_saved }]}
+            xKey="date"
+            dataKey="value"
+          />
+        </Box>
 
-        {/* avg handling time */}
-        <OrgHandlingTimeChart data={handling} />
+        {/* Avg Handling Time */}
+        <Box bg="white" p={4} borderRadius="md" shadow="md">
+          <Heading size="md" mb={2}>
+            Avg Handling Time (Days)
+          </Heading>
+          <ComposedChartComp
+            data={[{ month: "Avg", total: handling?.avg_hours ?? 0 }]}
+            dataKey="total"
+          />
+        </Box>
       </SimpleGrid>
     </Box>
   );

@@ -16,4 +16,15 @@ router.post("/org/:org_id/staff", adminController.addStaffToOrganisation);
 router.put("/org/:org_id/staff/:user_id", adminController.toggleOrganisationStaff);
 router.delete("/org/:org_id/staff/:user_id", adminController.removeOrganisationStaff);
 
+router.get("/summary", adminController.getSystemSummary);
+router.get("/monthly-trend", adminController.getMonthlyTrend);
+router.get("/categories", adminController.getCategoryBreakdown);
+router.get("/statuses", adminController.getStatusBreakdown);
+router.get("/organisation-performance", adminController.getOrgPerformance);
+router.get("/user-activity", adminController.getUserActivity);
+router.get("/sustainability-total", adminController.getSustainabilityTotal);
+
+// reports
+router.get("/report/:type", adminController.generateAdminReport);
+
 module.exports = router;

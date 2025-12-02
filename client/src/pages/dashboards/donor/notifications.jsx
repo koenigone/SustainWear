@@ -4,14 +4,11 @@ import {
   HStack,
   Text,
   Badge,
-  Divider,
   Button,
   Spinner,
-  Icon,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useNotifications } from "../../../components/notificationsContext";
-import { FaBell } from "react-icons/fa";
 import api from "../../../api/axiosClient";
 
 export default function Notifications({ isActive }) {
@@ -87,36 +84,19 @@ export default function Notifications({ isActive }) {
   }
 
   return (
-    <Box
-      bg="white"
-      p={6}
-      rounded="lg"
-      boxShadow="md"
-      maxW="700px"
-      mx="auto"
-      mt={6}
-    >
-      {/* HEADER BAR */}
-      <HStack justify="space-between" mb={4}>
-        <HStack>
-          <FaBell size="24" color="#38A169" />
-          <Text fontSize="2xl" fontWeight="bold" color="green.600">
-            Notifications
-          </Text>
-        </HStack>
-
-        {notifications.some((n) => !n.is_read) && (
-          <Button
-            size="sm"
-            colorScheme="green"
-            onClick={markAllAsRead}
-          >
-            Mark All as Read
-          </Button>
-        )}
+    <Box bg="white" maxW="150vh" mx="auto">
+      {/* MARK ALL AS READ BUTTON, GRAY OUT WHEN NOT READY */}
+      <HStack justify="flex-end" mb={4}>
+        <Button
+          size="sm"
+          colorScheme="green"
+          variant={notifications.some((n) => !n.is_read) ? "solid" : "outline"}
+          onClick={markAllAsRead}
+          isDisabled={!notifications.some((n) => !n.is_read)}
+        >
+          Mark All as Read
+        </Button>
       </HStack>
-
-      <Divider mb={4} />
 
       {/* LIST */}
       <VStack spacing={4} align="stretch">

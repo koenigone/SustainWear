@@ -3,14 +3,26 @@ import Header from "./components/header";
 
 export default function Layout({ title, children }) {
   return (
-    <Flex direction="column" minH="100vh" bg="brand.beige">
+    <Flex direction="column" h="100vh" bg="brand.beige" overflow="hidden">
+      {/* fixed header */}
       <Header />
-      <Box flex="1" p={8}>
-        <Heading size="lg" color="brand.green" mb={6}>
+
+      {/* main content area (non-scrollable wrapper) */}
+      <Flex direction="column" flex="1" overflow="hidden" p={8} pt="90px">
+        <Heading
+          size={{ base: "md", md: "lg" }}
+          color="brand.green"
+          mb={{ base: 4, md: 6 }}
+          flexShrink={0}
+        >
           {title}
         </Heading>
-        {children}
-      </Box>
+
+        {/* dashboard container */}
+        <Flex flex="1" overflow="hidden">
+          {children}
+        </Flex>
+      </Flex>
     </Flex>
   );
 }
