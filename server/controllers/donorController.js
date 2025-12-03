@@ -269,80 +269,74 @@ const generateDonationDescription = async (req, res) => {
 const getDonorMetrics = (req, res) => {
   const { donor_id } = req.params;
 
-  if (!donor_id) return res.status(400).json({ errMessage: "Missing donor ID" });
+  // distributed items belonging to this donor
+  const distributedQuery = `
+    SELECT dr.*, dt.category, dt.submitted_at
+    FROM DISTRIBUTION_RECORD dr
+    JOIN DONATION_TRANSACTION dt 
+      ON dt.transaction_id = dr.transaction_id
+    WHERE dt.donor_id = ?
+  `;
 
-  const queries = {
-    co2OverTime: `
-      SELECT DATE(submitted_at) AS date, 
-             SUM(estimated_co2_saved) AS total_co2
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ? AND status = 'Accepted'
-      GROUP BY DATE(submitted_at)
-      ORDER BY DATE(submitted_at)
-    `,
-    landfillOverTime: `
-      SELECT DATE(submitted_at) AS date, 
-             SUM(estimated_landfill_saved_kg) AS total_landfill
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ? AND status = 'Accepted'
-      GROUP BY DATE(submitted_at)
-      ORDER BY DATE(submitted_at)
-    `,
-    beneficiariesOverTime: `
-      SELECT DATE(submitted_at) AS date, 
-             SUM(estimated_beneficiaries) AS total_beneficiaries
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ? AND status = 'Accepted'
-      GROUP BY DATE(submitted_at)
-      ORDER BY DATE(submitted_at)
-    `,
-    categoryBreakdown: `
-      SELECT category, COUNT(*) AS total
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ?
-      GROUP BY category
-    `,
-    statusBreakdown: `
-      SELECT status, COUNT(*) AS total
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ?
-      GROUP BY status
-    `,
-    monthlyActivity: `
-      SELECT strftime('%Y-%m', submitted_at) AS month, 
-             COUNT(*) AS total
-      FROM DONATION_TRANSACTION
-      WHERE donor_id = ?
-      GROUP BY month
-      ORDER BY month
-    `,
-  };
+  // status breakdown (pending / accepted / declined)
+  const statusQuery = `
+    SELECT status, COUNT(*) as count
+    FROM DONATION_TRANSACTION
+    WHERE donor_id = ?
+    GROUP BY status
+  `;
 
-  const results = {};
+  db.all(distributedQuery, [donor_id], (distErr, distributedRows) => {
+    if (distErr) {
+      return res.status(500).json({
+        errMessage: "Database error fetching donor distribution metrics",
+        error: distErr.message,
+      });
+    }
 
-  const keys = Object.keys(queries);
+    // sustainability totals
+    const total_co2 = distributedRows.reduce((a, r) => a + (r.co2_saved || 0), 0);
+    const total_landfill = distributedRows.reduce((a, r) => a + (r.landfill_saved || 0), 0);
+    const total_beneficiaries = distributedRows.reduce((a, r) => a + (r.beneficiaries || 1), 0);
 
-  let completed = 0;
+    // category breakdown
+    const categoryCounts = {};
+    distributedRows.forEach(r => {
+      if (!categoryCounts[r.category]) categoryCounts[r.category] = 0;
+      categoryCounts[r.category] += 1;
+    });
 
-  keys.forEach((metric) => {
-    db.all(queries[metric], [donor_id], (err, rows) => {
-      if (err) {
-        console.error(`Query error for ${metric}:`, err);
+    // monthly distribution trend
+    const monthly = {};
+    distributedRows.forEach(r => {
+      const month = (r.distributed_at || "").slice(0,7); // "YYYY-MM"
+      if (!monthly[month]) monthly[month] = 0;
+      monthly[month] += 1;
+    });
+
+    db.all(statusQuery, [donor_id], (statusErr, statusRows) => {
+      if (statusErr) {
         return res.status(500).json({
-          errMessage: `Error generating ${metric}`,
-          error: err.message,
+          errMessage: "Database error fetching status breakdown",
+          error: statusErr.message,
         });
       }
 
-      results[metric] = rows;
-      completed++;
-
-      if (completed === keys.length) {
-        res.status(200).json(results);
-      }
+      return res.status(200).json({
+        total_distributed: distributedRows.length,
+        sustainability: {
+          co2_saved: total_co2,
+          landfill_saved: total_landfill,
+          beneficiaries: total_beneficiaries,
+        },
+        category_breakdown: categoryCounts,
+        monthly_trend: monthly,
+        status_breakdown: statusRows,
+      });
     });
   });
 };
+
 
 module.exports = {
   submitDonationRequest,

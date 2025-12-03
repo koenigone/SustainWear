@@ -1,22 +1,23 @@
 import {
   Box,
   SimpleGrid,
-  GridItem,
   Heading,
   Spinner,
+  Stat,
+  StatLabel,
+  StatNumber,
   useColorModeValue,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 
-// reusable charts
-import LineChartComp from "../../../components/charts/lineChartCO2";
-import AreaChartComp from "../../../components/charts/areaChartLS";
-import BarChartComp from "../../../components/charts/barChartBeneficiaries";
-import PieChartComp from "../../../components/charts/pieChartCB";
-import DoughnutChartComp from "../../../components/charts/doughnutChartSB";
-import ComposedChartComp from "../../../components/charts/composedChartMA";
+import ChartLine from "../../../components/charts/lineChart";
+import ChartPie from "../../../components/charts/pieChart";
+import ChartDoughnut from "../../../components/charts/doughnutChart";
+import VerticalChart from "../../../components/charts/verticalChart";
+
+import { buildDonorDashboardMetrics } from "../../../components/metrics/donorMetrics";
 
 export default function DonorHome() {
   const { user } = useAuth();
@@ -26,12 +27,14 @@ export default function DonorHome() {
   const cardBg = useColorModeValue("white", "gray.800");
 
   useEffect(() => {
+    if (!user?.user_id) return;
+
     api
       .get(`/donor/${user.user_id}/metrics`)
-      .then((res) => setMetrics(res.data))
+      .then((res) => setMetrics(buildDonorDashboardMetrics(res.data)))
       .catch((err) => console.error("Metrics error:", err))
       .finally(() => setLoading(false));
-  }, [user.user_id]);
+  }, [user?.user_id]);
 
   if (loading)
     return (
@@ -42,88 +45,88 @@ export default function DonorHome() {
 
   if (!metrics) return null;
 
+  const { kpis, charts } = metrics;
+
   return (
-    <Box p={6}>
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        {/* CO2 saved */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              CO₂ Saved Over Time
-            </Heading>
-            <LineChartComp
-              data={metrics.co2OverTime}
-              xKey="date"
-              dataKey="total_co2"
-            />
-          </Box>
-        </GridItem>
-
-        {/* landfill saved */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              Landfill Weight Saved (kg)
-            </Heading>
-            <AreaChartComp
-              data={metrics.landfillOverTime}
-              xKey="date"
-              dataKey="total_landfill"
-            />
-          </Box>
-        </GridItem>
-
-        {/* beneficiaries */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              People Benefited Over Time
-            </Heading>
-            <BarChartComp
-              data={metrics.beneficiariesOverTime}
-              xKey="date"
-              dataKey="total_beneficiaries"
-            />
-          </Box>
-        </GridItem>
-
-        {/* category breakdown */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              Donation Categories
-            </Heading>
-            <PieChartComp
-              data={metrics.categoryBreakdown}
-              dataKey="total"
-              nameKey="category"
-            />
-          </Box>
-        </GridItem>
-
-        {/* status breakdown */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              Donation Status Overview
-            </Heading>
-            <DoughnutChartComp data={metrics.statusBreakdown} dataKey="total" />
-          </Box>
-        </GridItem>
-
-        {/* monthly activity */}
-        <GridItem>
-          <Box p={4} borderRadius="lg" bg={cardBg} boxShadow="md">
-            <Heading size="md" mb={2}>
-              Monthly Donation Activity
-            </Heading>
-            <ComposedChartComp
-              data={metrics.monthlyActivity}
-              dataKey="total"
-            />
-          </Box>
-        </GridItem>
+    <Box p={8}>
+      {/* KPI CARDS */}
+      <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6} mb={10}>
+        <StatCard label="Total Donations" value={kpis.total_donations} />
+        <StatCard label="Items Distributed" value={kpis.total_distributed} />
+        <StatCard label="CO₂ Saved (kg)" value={kpis.co2_saved.toFixed(1)} />
+        <StatCard label="People Helped" value={kpis.beneficiaries} />
       </SimpleGrid>
+
+      {/* CHARTS */}
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+        <ChartCard title="CO₂ Saved Over Time">
+          <ChartLine data={charts.co2_over_time} dataKey="value" xKey="label" />
+        </ChartCard>
+
+        <ChartCard title="Category Breakdown">
+          <ChartPie
+            data={charts.category_breakdown}
+            dataKey="value"
+            nameKey="label"
+          />
+        </ChartCard>
+
+        <ChartCard title="Donation Status Breakdown">
+          <ChartDoughnut data={charts.status_breakdown} dataKey="value" />
+        </ChartCard>
+
+        <ChartCard title="Monthly Distribution Activity">
+          <VerticalChart
+            data={charts.monthly_distribution}
+            dataKey="value"
+            categoryKey="label"
+          />
+        </ChartCard>
+      </SimpleGrid>
+    </Box>
+  );
+}
+
+// reusable UI components
+function StatCard({ label, value }) {
+  const cardBg = useColorModeValue("white", "gray.800");
+  return (
+    <Box
+      p={5}
+      borderRadius="lg"
+      bg={cardBg}
+      boxShadow="lg"
+      textAlign="center"
+      transition="0.2s"
+      _hover={{ transform: "translateY(-3px)", boxShadow: "xl" }}
+    >
+      <Stat>
+        <StatLabel fontSize="sm" color="gray.500">
+          {label}
+        </StatLabel>
+        <StatNumber fontSize="2xl" color="green.600">
+          {value}
+        </StatNumber>
+      </Stat>
+    </Box>
+  );
+}
+
+function ChartCard({ title, children }) {
+  const cardBg = useColorModeValue("white", "gray.800");
+  return (
+    <Box
+      p={5}
+      borderRadius="lg"
+      bg={cardBg}
+      boxShadow="md"
+      transition="0.2s"
+      _hover={{ boxShadow: "lg" }}
+    >
+      <Heading size="md" mb={4} color="green.700">
+        {title}
+      </Heading>
+      <Box minH="260px">{children}</Box>
     </Box>
   );
 }

@@ -98,7 +98,7 @@ const updateDonationRequestStatus = async (req, res) => {
   const { transaction_id } = req.params;
   const { status, handled_by_staff_id, reason } = req.body;
 
-  // only two allowed statuses
+  // only two allowed statuses now
   const allowedStatuses = ["Accepted", "Declined"];
   if (!allowedStatuses.includes(status)) {
     return res.status(400).json({ errMessage: "Invalid donation status" });
@@ -109,13 +109,15 @@ const updateDonationRequestStatus = async (req, res) => {
   }
 
   if (status === "Declined" && !reason) {
-    return res
-      .status(400)
-      .json({ errMessage: "A reason is required when declining a donation" });
+    return res.status(400).json({
+      errMessage: "A reason is required when declining a donation",
+    });
   }
 
   try {
-    // validate staff exists
+    // ================================
+    // Validate staff
+    // ================================
     const staffRow = await new Promise((resolve, reject) => {
       db.get(
         `
@@ -134,7 +136,9 @@ const updateDonationRequestStatus = async (req, res) => {
       return res.status(400).json({ errMessage: "Invalid staff ID" });
     }
 
-    // update donation status
+    // ================================
+    // Update donation status
+    // ================================
     const donationUpdated = await new Promise((resolve, reject) => {
       db.run(
         `
@@ -159,7 +163,9 @@ const updateDonationRequestStatus = async (req, res) => {
         .json({ errMessage: "Donation transaction not found" });
     }
 
-    // fetch donation + donor info
+    // ================================
+    // Fetch donation + donor email
+    // ================================
     const donation = await new Promise((resolve, reject) => {
       db.get(
         `
@@ -175,30 +181,14 @@ const updateDonationRequestStatus = async (req, res) => {
 
     if (!donation) {
       return res.status(500).json({
-        errMessage: "Donation updated, but donor lookup failed",
+        errMessage: "Donation updated but donor lookup failed",
       });
     }
 
-    // if Accepted -> Insert into Inventory
+    // ================================
+    // If Accepted → Insert into Inventory
+    // ================================
     if (status === "Accepted") {
-      const impact = calculateSustainabilityImpact(donation.category);
-
-      // save sustainability estimates (temporary until distribution stage)
-      await new Promise((resolve, reject) => {
-        db.run(
-          `
-            UPDATE DONATION_TRANSACTION
-            SET estimated_co2_saved = ?, 
-                estimated_landfill_saved_kg = ?, 
-                estimated_beneficiaries = ?
-            WHERE transaction_id = ?
-          `,
-          [impact.co2, impact.landfill, impact.beneficiaries, transaction_id],
-          (err) => (err ? reject(err) : resolve())
-        );
-      });
-
-      // Insert item into inventory
       await new Promise((resolve, reject) => {
         db.run(
           `
@@ -222,7 +212,9 @@ const updateDonationRequestStatus = async (req, res) => {
       });
     }
 
-    // donor notifications message (in app and email)
+    // ================================
+    // Build donor notification message
+    // ================================
     const message =
       status === "Accepted"
         ? `Your donation (ID: ${transaction_id}) has been accepted and added to the charity inventory.`
@@ -235,7 +227,7 @@ const updateDonationRequestStatus = async (req, res) => {
       console.error("Email send failed:", e);
     }
 
-    // send in app notification
+    // send in-app notification
     sendDonorNotification(
       donation.donor_id,
       `Donation Request ${status}`,
@@ -255,112 +247,149 @@ const updateDonationRequestStatus = async (req, res) => {
   }
 };
 
-// SUMMARY METRIC
-const getOrgMetricsSummary = (req, res) => {
+// ORG METRICS
+const getOrganisationMetrics = (req, res) => {
   const { org_id } = req.params;
 
-  const metricsQuery = `
-    SELECT
-      COUNT(*) AS total_donations,
-      SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) AS accepted,
-      SUM(CASE WHEN status = 'Declined' THEN 1 ELSE 0 END) AS declined,
-      SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
-      SUM(estimated_co2_saved) AS total_co2_saved,
-      SUM(estimated_landfill_saved_kg) AS total_landfill_saved,
-      SUM(estimated_beneficiaries) AS total_beneficiaries
+  // queries for data
+  const pendingQuery = `
+    SELECT COUNT(*) AS pending
     FROM DONATION_TRANSACTION
+    WHERE org_id = ? AND status = 'Pending'
+  `;
+
+  const acceptedQuery = `
+    SELECT COUNT(*) AS accepted
+    FROM DONATION_TRANSACTION
+    WHERE org_id = ? AND status = 'Accepted'
+  `;
+
+  const distributedQuery = `
+    SELECT COUNT(*) AS distributed
+    FROM DISTRIBUTION_RECORD
     WHERE org_id = ?
   `;
 
-  db.get(metricsQuery, [org_id], (err, row) => {
-    if (err) {
-      return res.status(500).json({
-        errMessage: "Failed to load organisation metrics",
-        error: err.message,
-      });
-    }
+  const co2Query = `
+    SELECT SUM(co2_saved) AS total_co2
+    FROM DISTRIBUTION_RECORD
+    WHERE org_id = ?
+  `;
 
-    return res.status(200).json(row);
-  });
-};
-
-// MONTHLY TREND METRIC
-const getOrgMonthlyTrend = (req, res) => {
-  const { org_id } = req.params;
-
-  const metricsQuery = `
-    SELECT
-      strftime('%Y-%m', submitted_at) AS month,
-      COUNT(*) AS total,
-      SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) AS accepted
+  // monthly incoming donations
+  const monthlyIncomingQuery = `
+    SELECT strftime('%Y-%m', submitted_at) AS month, COUNT(*) AS total
     FROM DONATION_TRANSACTION
     WHERE org_id = ?
     GROUP BY month
-    ORDER BY month ASC
+    ORDER BY month
   `;
 
-  db.all(metricsQuery, [org_id], (err, rows) => {
-    if (err) {
-      return res.status(500).json({
-        errMessage: "Failed to load monthly trend",
-        error: err.message,
-      });
-    }
-
-    return res.status(200).json(rows);
-  });
-};
-
-// BREAKDOWN METRIC
-const getOrgCategoryBreakdown = (req, res) => {
-  const { org_id } = req.params;
-
-  const metricsQuery = `
+  // category breakdown (Accepted Only)
+  const categoryQuery = `
     SELECT category, COUNT(*) AS total
     FROM DONATION_TRANSACTION
-    WHERE org_id = ?
+    WHERE org_id = ? AND status = 'Accepted'
     GROUP BY category
-    ORDER BY total DESC
   `;
 
-  db.all(metricsQuery, [org_id], (err, rows) => {
-    if (err) {
-      return res.status(500).json({
-        errMessage: "Failed to load category breakdown",
-        error: err.message,
-      });
-    }
-
-    res.status(200).json(rows);
-  });
-};
-
-// HANDLING TIME METRIC
-const getOrgHandlingTime = (req, res) => {
-  const { org_id } = req.params;
-
-  const metricsQuery = `
-    SELECT
+  // processing time per staff
+  const processingTimeQuery = `
+    SELECT 
+      (u.first_name || ' ' || u.last_name) AS staff_name,
       AVG(
-        (julianday(handled_at) - julianday(submitted_at)) * 24
-      ) AS avg_hours
+        julianday(dt.handled_at) - julianday(dt.submitted_at)
+      ) * 24 AS avg_hours
+    FROM DONATION_TRANSACTION dt
+    JOIN USER u ON u.user_id = dt.handled_by_staff_id
+    WHERE dt.org_id = ? AND dt.status = 'Accepted'
+    GROUP BY dt.handled_by_staff_id
+  `;
+
+  // distribution impact over time
+  const distributionImpactQuery = `
+    SELECT 
+      strftime('%Y-%m', distributed_at) AS month,
+      SUM(co2_saved) AS total_co2,
+      SUM(landfill_saved) AS total_landfill,
+      SUM(beneficiaries) AS total_beneficiaries
+    FROM DISTRIBUTION_RECORD
+    WHERE org_id = ?
+    GROUP BY month
+    ORDER BY month
+  `;
+
+  // status breakdown
+  const statusBreakdownQuery = `
+    SELECT status, COUNT(*) AS total
     FROM DONATION_TRANSACTION
     WHERE org_id = ?
-      AND handled_at IS NOT NULL
+    GROUP BY status
   `;
 
-  db.get(metricsQuery, [org_id], (err, row) => {
-    if (err) {
-      return res.status(500).json({
-        errMessage: "Failed to load handling time",
-        error: err.message,
-      });
-    }
+  // execute all queries in order
+  db.get(pendingQuery, [org_id], (err, pending) => {
+    if (err) return sendErr(res, err);
 
-    res.status(200).json(row);
+    db.get(acceptedQuery, [org_id], (err, accepted) => {
+      if (err) return sendErr(res, err);
+
+      db.get(distributedQuery, [org_id], (err, distributed) => {
+        if (err) return sendErr(res, err);
+
+        db.get(co2Query, [org_id], (err, co2) => {
+          if (err) return sendErr(res, err);
+
+          db.all(monthlyIncomingQuery, [org_id], (err, monthlyRows) => {
+            if (err) return sendErr(res, err);
+
+            db.all(categoryQuery, [org_id], (err, categoryRows) => {
+              if (err) return sendErr(res, err);
+
+              db.all(processingTimeQuery, [org_id], (err, processingRows) => {
+                if (err) return sendErr(res, err);
+
+                db.all(distributionImpactQuery, [org_id], (err, impactRows) => {
+                  if (err) return sendErr(res, err);
+
+                  db.all(statusBreakdownQuery, [org_id], (err, statusRows) => {
+                    if (err) return sendErr(res, err);
+
+                    // final structured metrics response
+                    res.status(200).json({
+                      kpis: {
+                        pending: pending.pending || 0,
+                        accepted: accepted.accepted || 0,
+                        distributed: distributed.distributed || 0,
+                        co2_saved: co2.total_co2 || 0,
+                      },
+
+                      charts: {
+                        monthly_incoming: monthlyRows,
+                        category_breakdown: categoryRows,
+                        processing_time: processingRows,
+                        distribution_impact: impactRows,
+                        status_breakdown: statusRows,
+                      },
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
   });
 };
+
+// helper
+function sendErr(res, err) {
+  return res.status(500).json({
+    errMessage: "Error fetching organisation metrics",
+    error: err.message,
+  });
+}
 
 // INVENTORY LOGIC
 
@@ -534,15 +563,16 @@ const distributeInventoryItem = (req, res) => {
         // INSERT distribution record AFTER deletion
         const insertDistribution = `
           INSERT INTO DISTRIBUTION_RECORD 
-            (inv_id, org_id, quantity_distributed, beneficiary_group, handled_by_staff_id,
-             co2_saved, landfill_saved, beneficiaries)
-          VALUES (?, ?, 1, ?, ?, ?, ?, ?)
+          (inv_id, transaction_id, org_id, quantity_distributed, beneficiary_group,
+          handled_by_staff_id, co2_saved, landfill_saved, beneficiaries)
+          VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)
         `;
 
         db.run(
           insertDistribution,
           [
             inv_id,
+            item.transaction_id,
             org_id,
             beneficiary_group,
             staff_id,
@@ -590,10 +620,7 @@ module.exports = {
   getActiveOrganisations,
   getAllDonationRequests,
   updateDonationRequestStatus,
-  getOrgMetricsSummary,
-  getOrgMonthlyTrend,
-  getOrgCategoryBreakdown,
-  getOrgHandlingTime,
+  getOrganisationMetrics,
   getInventoryItems,
   getInventoryItemById,
   removeInventoryItem,

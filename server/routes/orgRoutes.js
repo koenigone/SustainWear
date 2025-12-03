@@ -12,10 +12,7 @@ router.post(
 );
 
 // org metrics
-router.get("/:org_id/summary", verifyToken, orgController.getOrgMetricsSummary);
-router.get("/:org_id/monthly-trend", verifyToken, orgController.getOrgMonthlyTrend);
-router.get("/:org_id/categories", verifyToken, orgController.getOrgCategoryBreakdown);
-router.get("/:org_id/handling-time", verifyToken, orgController.getOrgHandlingTime);
+router.get("/:org_id/metrics", verifyToken, orgController.getOrganisationMetrics);
 
 // inventory routes
 router.get("/:org_id/inventory", verifyToken, orgController.getInventoryItems);

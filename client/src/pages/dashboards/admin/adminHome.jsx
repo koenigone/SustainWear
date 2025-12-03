@@ -10,11 +10,11 @@ import {
 import api from "../../../api/axiosClient";
 
 // charts
-import LineChartComp from "../../../components/charts/lineChartCO2";
+import LineChartComp from "../../../components/charts/lineChart";
 import BarChartComp from "../../../components/charts/barChartBeneficiaries";
-import PieChartComp from "../../../components/charts/pieChartCB";
-import DoughnutChartComp from "../../../components/charts/doughnutChartSB";
-import ComposedChartComp from "../../../components/charts/composedChartMA";
+import PieChartComp from "../../../components/charts/pieChart";
+import DoughnutChartComp from "../../../components/charts/doughnutChart";
+import ComposedChartComp from "../../../components/charts/composedChart";
 import VerticalChart from "../../../components/charts/verticalChart";
 
 export default function AdminHome() {
@@ -98,7 +98,7 @@ export default function AdminHome() {
           <Heading size="md" mb={2}>Category Breakdown</Heading>
           <BarChartComp
             data={categories}
-            xKey="category"  // or "category_name"
+            xKey="category"
             dataKey="count"
           />
         </Box>
@@ -144,7 +144,7 @@ export default function AdminHome() {
           <PieChartComp
             data={userRoles}
             dataKey="count"
-            nameKey="role" // or "role_name"
+            nameKey="role"
           />
         </Box>
       </SimpleGrid>
