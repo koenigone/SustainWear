@@ -20,6 +20,9 @@ router.post("/generate-description", verifyToken, donorController.generateDonati
 router.get("/donations/history", verifyToken, donorController.getDonationHistory);
 
 // metrics
-router.get("/:donor_id/metrics", verifyToken, donorController.getDonorMetrics);
+router.get("/dashboard/summary", verifyToken, donorController.getDonorSummary);
+router.get("/dashboard/status", verifyToken, donorController.getDonationStatusBreakdown);
+router.get("/dashboard/categories", verifyToken, donorController.getDonationCategoryBreakdown);
+router.get("/dashboard/monthly-impact", verifyToken, donorController.getMonthlyImpact);
 
 module.exports = router;

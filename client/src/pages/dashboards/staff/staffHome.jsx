@@ -1,150 +1,112 @@
-import {
-  Box,
-  SimpleGrid,
-  Heading,
-  Spinner,
-  Stat,
-  StatLabel,
-  StatNumber,
-  useColorModeValue,
-} from "@chakra-ui/react";
-
 import { useEffect, useState } from "react";
+import { Box, SimpleGrid, Flex, Spinner, Text } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 
-// chart components
-import ChartLine from "../../../components/charts/lineChart";
-import ChartPie from "../../../components/charts/pieChart";
-import ChartDoughnut from "../../../components/charts/doughnutChart";
-import VerticalChart from "../../../components/charts/verticalChart";
-import AreaChart from "../../../components/charts/areaChart";
+import OrgStatusChart from "../../../components/charts/staff/orgStatusChart";
+import OrgCategoryChart from "../../../components/charts/staff/orgCategoryChart";
+import OrgDistributionChart from "../../../components/charts/staff/orgDistributionChart";
+import OrgEnvironmentChart from "../../../components/charts/staff/orgEnvironmentChart";
 
-// metric builder
-import { buildStaffDashboardMetrics } from "../../../components/metrics/staffMetrics";
-
-export default function StaffHome() {
+export default function OrgHome() {
   const { organisation } = useAuth();
-  const [metrics, setMetrics] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [statusData, setStatusData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
+  const [distributionData, setDistributionData] = useState([]);
+  const [environmentData, setEnvironmentData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const cardBg = useColorModeValue("white", "gray.800");
-
   useEffect(() => {
-    if (!organisation?.org_id) return;
+    if (!organisation) {
+      setLoading(false);
+      return;
+    }
+    loadAll();
+  }, [organisation]);
 
-    api
-      .get(`/orgs/${organisation.org_id}/metrics`)
-      .then((res) => setMetrics(buildStaffDashboardMetrics(res.data)))
-      .catch((err) => console.error("Metrics error:", err))
-      .finally(() => setLoading(false));
-  }, [organisation?.org_id]);
+  const loadAll = async () => {
+    try {
+      const orgId = organisation.org_id || organisation.id;
 
-  if (loading)
+      const [sum, status, category, dist, env] = await Promise.all([
+        api.get(`/orgs/${orgId}/dashboard/summary`),
+        api.get(`/orgs/${orgId}/dashboard/status`),
+        api.get(`/orgs/${orgId}/dashboard/categories`),
+        api.get(`/orgs/${orgId}/dashboard/distribution-monthly`),
+        api.get(`/orgs/${orgId}/dashboard/environment-monthly`),
+      ]);
+
+      setSummary(sum.data);
+      setStatusData(status.data);
+      setCategoryData(category.data);
+      setDistributionData(dist.data);
+      setEnvironmentData(env.data);
+    } catch (err) {
+      console.error("Org dashboard error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!organisation) {
     return (
-      <Box textAlign="center" mt={20}>
-        <Spinner size="xl" color="green.500" />
-      </Box>
+      <Flex justify="center" align="center" h="70vh">
+        <Text color="gray.600">
+          You are not assigned to an organisation yet.
+        </Text>
+      </Flex>
     );
+  }
 
-  if (!metrics) return null;
-
-  const { kpis, charts } = metrics;
+  if (loading || !summary) {
+    return (
+      <Flex justify="center" align="center" h="70vh">
+        <Spinner size="xl" color="brand.green" />
+      </Flex>
+    );
+  }
 
   return (
-    <Box p={8}>
-      {/* KPI CARDS */}
-      <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6} mb={10}>
-        <StatCard label="Pending Donations" value={kpis.pending} />
-        <StatCard label="Accepted Donations" value={kpis.accepted} />
-        <StatCard label="Items Distributed" value={kpis.distributed} />
-        <StatCard label="CO₂ Saved (kg)" value={kpis.co2_saved.toFixed(1)} />
+    <Box>
+      {/* SUMMARY CARDS */}
+      <SimpleGrid columns={[1, 2, 4]} spacing={6} mb={8}>
+        <StatCard label="Pending Requests" value={summary.pending_requests} />
+        <StatCard
+          label="Accepted Donations"
+          value={summary.accepted_donations}
+        />
+        <StatCard label="Items Distributed" value={summary.items_distributed} />
+        <StatCard label="People Helped" value={summary.beneficiaries_served} />
       </SimpleGrid>
 
       {/* CHARTS */}
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-        <ChartCard title="Monthly Incoming Donations">
-          <ChartLine
-            data={charts.monthly_incoming}
-            xKey="label"
-            dataKey="value"
-          />
-        </ChartCard>
-
-        <ChartCard title="Category Breakdown (Accepted Items)">
-          <ChartPie
-            data={charts.category_breakdown}
-            dataKey="value"
-            nameKey="label"
-          />
-        </ChartCard>
-
-        <ChartCard title="Staff Processing Speed (avg hours)">
-          <VerticalChart
-            data={charts.processing_time}
-            categoryKey="label"
-            dataKey="value"
-          />
-        </ChartCard>
-
-        <ChartCard title="Distribution CO₂ Impact Over Time">
-          <AreaChart
-            data={charts.distribution_impact}
-            xKey="label"
-            dataKey="value"
-          />
-        </ChartCard>
-
-        <ChartCard title="Donation Status Breakdown">
-          <ChartDoughnut data={charts.status_breakdown} dataKey="value" />
-        </ChartCard>
+      <SimpleGrid columns={[1, 2]} spacing={8} minChildWidth="350px">
+        <OrgStatusChart data={statusData} loading={loading} />
+        <OrgCategoryChart data={categoryData} loading={loading} />
+        <OrgDistributionChart data={distributionData} loading={loading} />
+        <OrgEnvironmentChart data={environmentData} loading={loading} />
       </SimpleGrid>
     </Box>
   );
 }
 
-// SHARED UI COMPONENTS
 function StatCard({ label, value }) {
-  const cardBg = useColorModeValue("white", "gray.800");
-
   return (
     <Box
       p={5}
+      bg="white"
       borderRadius="lg"
-      bg={cardBg}
-      boxShadow="lg"
-      textAlign="center"
-      transition="0.2s"
-      _hover={{ transform: "translateY(-3px)", boxShadow: "xl" }}
+      shadow="sm"
+      border="1px solid"
+      borderColor="gray.200"
     >
-      <Stat>
-        <StatLabel fontSize="sm" color="gray.500">
-          {label}
-        </StatLabel>
-        <StatNumber fontSize="2xl" color="green.600">
-          {value}
-        </StatNumber>
-      </Stat>
-    </Box>
-  );
-}
-
-function ChartCard({ title, children }) {
-  const cardBg = useColorModeValue("white", "gray.800");
-
-  return (
-    <Box
-      p={5}
-      borderRadius="lg"
-      bg={cardBg}
-      boxShadow="md"
-      transition="0.2s"
-      _hover={{ boxShadow: "lg" }}
-    >
-      <Heading size="md" mb={4} color="green.700">
-        {title}
-      </Heading>
-      <Box minH="260px">{children}</Box>
+      <Text fontSize="sm" color="gray.500" mb={1}>
+        {label}
+      </Text>
+      <Text fontSize="2xl" fontWeight="700" color="brand.green">
+        {value ?? 0}
+      </Text>
     </Box>
   );
 }

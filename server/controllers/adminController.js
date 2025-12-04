@@ -385,210 +385,154 @@ const removeOrganisationStaff = (req, res) => {
   });
 };
 
-// TOTAL SYSTEM SUMMARY
-const getSystemSummary = (req, res) => {
-  const q = `
-      SELECT 
-        (SELECT COUNT(*) FROM DONATION_TRANSACTION) AS total_donations,
-        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Accepted') AS accepted,
-        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Declined') AS declined,
-        (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status='Cancelled') AS cancelled,
-        (SELECT COUNT(*) FROM USER) AS total_users,
-        (SELECT COUNT(*) FROM ORGANISATION) AS total_organisations,
-        (SELECT SUM(estimated_co2_saved) FROM DONATION_TRANSACTION) AS total_co2,
-        (SELECT SUM(estimated_landfill_saved_kg) FROM DONATION_TRANSACTION) AS total_landfill,
-        (SELECT SUM(estimated_beneficiaries) FROM DONATION_TRANSACTION) AS total_beneficiaries
-    `;
+// METRICS
 
-  db.get(q, [], (err, row) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
+// SUMMARY
+const getAdminSummary = (req, res) => {
+  const query = `
+    SELECT
+      -- donation pipeline
+      (SELECT COUNT(*) FROM DONATION_TRANSACTION) AS total_donations,
+      (SELECT COUNT(*) FROM DONATION_TRANSACTION WHERE status = 'Accepted') AS total_accepted,
+      (SELECT COUNT(*) FROM DISTRIBUTION_RECORD) AS total_distributed,
+      (SELECT IFNULL(SUM(beneficiaries), 0) FROM DISTRIBUTION_RECORD) AS total_beneficiaries,
+
+      -- sustainability impact
+      (SELECT IFNULL(SUM(co2_saved), 0) FROM DISTRIBUTION_RECORD) AS total_co2,
+      (SELECT IFNULL(SUM(landfill_saved), 0) FROM DISTRIBUTION_RECORD) AS total_landfill,
+
+      -- user counts
+      (SELECT COUNT(*) FROM USER) AS total_users,
+      (SELECT COUNT(*) FROM USER WHERE role = 'Donor') AS total_donors,
+      (SELECT COUNT(*) FROM USER WHERE role = 'Staff') AS total_staff,
+      (SELECT COUNT(*) FROM USER WHERE role = 'Admin') AS total_admins,
+
+      -- user activity breakdown
+      (SELECT COUNT(*) FROM USER WHERE is_active = 1) AS active_users,
+      (SELECT COUNT(*) FROM USER WHERE is_active = 0) AS inactive_users
+  `;
+
+  db.get(query, [], (err, row) => {
+    if (err) return res.status(500).json({ err: err.message });
     res.json(row);
   });
 };
 
-// MONTHLY TREND
-const getMonthlyTrend = (req, res) => {
-  const q = `
-      SELECT strftime('%Y-%m', submitted_at) AS month,
-             COUNT(*) AS count
+const getMonthlyActivity = (req, res) => {
+  const query = `
+    SELECT 
+      month,
+      SUM(submitted_count) AS submitted,
+      SUM(accepted_count) AS accepted,
+      SUM(distributed_count) AS distributed
+    FROM (
+      -- monthly submitted donations
+      SELECT
+        strftime('%Y-%m', submitted_at) AS month,
+        COUNT(*) AS submitted_count,
+        0 AS accepted_count,
+        0 AS distributed_count
       FROM DONATION_TRANSACTION
       GROUP BY month
-      ORDER BY month ASC
-    `;
 
-  db.all(q, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
-    res.json(rows);
-  });
-};
+      UNION ALL
 
-// CATEGORY BREAKDOWN
-const getCategoryBreakdown = (req, res) => {
-  const q = `
-      SELECT category, COUNT(*) AS count
+      -- monthly accepted donations
+      SELECT
+        strftime('%Y-%m', handled_at) AS month,
+        0 AS submitted_count,
+        COUNT(*) AS accepted_count,
+        0 AS distributed_count
       FROM DONATION_TRANSACTION
-      GROUP BY category
-    `;
+      WHERE status = 'Accepted'
+      GROUP BY month
 
-  db.all(q, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
-    res.json(rows);
-  });
-};
+      UNION ALL
 
-// STATUS BREAKDOWN
-const getStatusBreakdown = (req, res) => {
-  const q = `
-      SELECT status, COUNT(*) AS count
-      FROM DONATION_TRANSACTION
-      GROUP BY status
-    `;
+      -- monthly distributed items
+      SELECT
+        strftime('%Y-%m', distributed_at) AS month,
+        0 AS submitted_count,
+        0 AS accepted_count,
+        COUNT(*) AS distributed_count
+      FROM DISTRIBUTION_RECORD
+      GROUP BY month
+    )
+    GROUP BY month
+    ORDER BY month;
+  `;
 
-  db.all(q, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
     res.json(rows);
   });
 };
 
 // ORGANISATION PERFORMANCE
 const getOrgPerformance = (req, res) => {
-  const q = `
-      SELECT 
-        o.org_id,
-        o.name,
-        COUNT(d.transaction_id) AS handled_count,
-        SUM(d.estimated_co2_saved) AS co2,
-        SUM(d.estimated_beneficiaries) AS beneficiaries,
-        AVG(
-          julianday(d.handled_at) - julianday(d.submitted_at)
-        ) * 24 AS avg_handling_hours
-      FROM ORGANISATION o
-      LEFT JOIN DONATION_TRANSACTION d ON o.org_id = d.org_id
-      GROUP BY o.org_id
-      ORDER BY handled_count DESC
-    `;
+  const query = `
+    SELECT 
+      o.org_id,
+      o.name AS organisation_name,
 
-  db.all(q, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
-    res.json(rows);
-  });
-};
+      -- accepted donations
+      (SELECT COUNT(*) 
+       FROM DONATION_TRANSACTION dt 
+       WHERE dt.org_id = o.org_id AND dt.status = 'Accepted'
+      ) AS accepted_donations,
 
-// USER ACTIVITY
-const getUserActivity = (req, res) => {
-  const q = `
-      SELECT role, COUNT(*) AS count
-      FROM USER
-      GROUP BY role
-    `;
+      -- distributed items
+      (SELECT COUNT(*) 
+       FROM DISTRIBUTION_RECORD dr 
+       WHERE dr.org_id = o.org_id
+      ) AS distributed_items,
 
-  db.all(q, [], (err, rows) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
-    res.json(rows);
-  });
-};
+      -- beneficiaries served
+      (SELECT IFNULL(SUM(beneficiaries), 0)
+       FROM DISTRIBUTION_RECORD dr 
+       WHERE dr.org_id = o.org_id
+      ) AS beneficiaries
 
-const getSustainabilityTotal = (req, res) => {
-  const q = `
-      SELECT 
-        SUM(estimated_co2_saved) AS total_co2,
-        SUM(estimated_landfill_saved_kg) AS total_landfill,
-        SUM(estimated_beneficiaries) AS total_beneficiaries
-      FROM DONATION_TRANSACTION
-      WHERE status='Accepted'
-    `;
-
-  db.get(q, [], (err, row) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "DB error", error: err.message });
-    res.json(row);
-  });
-};
-
-// Helper to export CSV
-function sendCSV(res, filename, rows) {
-  const parser = new Parser();
-  const csv = parser.parse(rows);
-
-  res.header("Content-Type", "text/csv");
-  res.attachment(filename);
-  return res.send(csv);
-}
-
-const generateAdminReport = (req, res) => {
-  const { type } = req.params;
-
-  let query = "";
-
-  switch (type) {
-    case "monthly":
-      query = `
-        SELECT strftime('%Y-%m', submitted_at) AS month, COUNT(*) AS count
-        FROM DONATION_TRANSACTION
-        GROUP BY month
-      `;
-      break;
-
-    case "organisations":
-      query = `
-        SELECT o.org_name, COUNT(*) AS accepted
-        FROM DONATION_TRANSACTION d
-        JOIN ORGANISATION o ON o.org_id = d.org_id
-        WHERE d.status = 'Accepted'
-        GROUP BY o.org_id
-      `;
-      break;
-
-    case "sustainability":
-      query = `
-        SELECT 
-          SUM(estimated_co2_saved) AS total_co2,
-          SUM(estimated_landfill_saved_kg) AS total_landfill,
-          SUM(estimated_beneficiaries) AS total_beneficiaries
-        FROM DONATION_TRANSACTION
-      `;
-      break;
-
-    case "users":
-      query = `
-        SELECT role, COUNT(*) AS count
-        FROM USER
-        GROUP BY role
-      `;
-      break;
-
-    default:
-      return res.status(400).json({ errMessage: "Invalid report type" });
-  }
+    FROM ORGANISATION o
+    WHERE o.is_active = 1
+    ORDER BY distributed_items DESC;
+  `;
 
   db.all(query, [], (err, rows) => {
-    if (err) {
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
-    }
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
 
-    return sendCSV(res, `${type}_report.csv`, rows);
+// STATUS BREAKDOWN
+const getStatusBreakdown = (req, res) => {
+  const query = `
+    SELECT status, COUNT(*) AS count
+    FROM DONATION_TRANSACTION
+    GROUP BY status;
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
+
+// MONTHLY ENVIRONMENT DATA
+const getEnvironmentMonthly = (req, res) => {
+  const query = `
+    SELECT 
+      strftime('%Y-%m', distributed_at) AS month,
+      SUM(co2_saved) AS total_co2,
+      SUM(landfill_saved) AS total_landfill
+    FROM DISTRIBUTION_RECORD
+    GROUP BY month
+    ORDER BY month;
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
   });
 };
 
@@ -604,12 +548,9 @@ module.exports = {
   getOrganisationStaff,
   toggleOrganisationStaff,
   removeOrganisationStaff,
-  getSystemSummary,
-  getMonthlyTrend,
-  getCategoryBreakdown,
-  getStatusBreakdown,
+  getAdminSummary,
+  getMonthlyActivity,
   getOrgPerformance,
-  getUserActivity,
-  getSustainabilityTotal,
-  generateAdminReport,
+  getStatusBreakdown,
+  getEnvironmentMonthly,
 };

@@ -11,9 +11,6 @@ router.post(
   orgController.updateDonationRequestStatus
 );
 
-// org metrics
-router.get("/:org_id/metrics", verifyToken, orgController.getOrganisationMetrics);
-
 // inventory routes
 router.get("/:org_id/inventory", verifyToken, orgController.getInventoryItems);
 router.get("/:org_id/inventory/:inv_id", verifyToken, orgController.getInventoryItemById);
@@ -21,5 +18,12 @@ router.delete("/:org_id/inventory/:inv_id", verifyToken, orgController.removeInv
 
 // distribution routes
 router.post("/:org_id/distribute/:inv_id", verifyToken, orgController.distributeInventoryItem);
+
+// metrics routes
+router.get("/:org_id/dashboard/summary", verifyToken, orgController.getOrgSummary);
+router.get("/:org_id/dashboard/status", verifyToken, orgController.getOrgStatusBreakdown);
+router.get("/:org_id/dashboard/categories", verifyToken, orgController.getOrgCategoryBreakdown);
+router.get("/:org_id/dashboard/distribution-monthly", verifyToken, orgController.getOrgDistributionMonthly);
+router.get("/:org_id/dashboard/environment-monthly", verifyToken, orgController.getOrgEnvironmentalMonthly);
 
 module.exports = router;

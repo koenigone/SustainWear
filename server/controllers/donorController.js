@@ -266,77 +266,98 @@ const generateDonationDescription = async (req, res) => {
 };
 
 // DONOR METRICS
-const getDonorMetrics = (req, res) => {
-  const { donor_id } = req.params;
 
-  // distributed items belonging to this donor
-  const distributedQuery = `
-    SELECT dr.*, dt.category, dt.submitted_at
-    FROM DISTRIBUTION_RECORD dr
-    JOIN DONATION_TRANSACTION dt 
-      ON dt.transaction_id = dr.transaction_id
-    WHERE dt.donor_id = ?
-  `;
+// SUMMARY CARDS (total donations, co2 saved, landfill, beneficiaries)
+const getDonorSummary = (req, res) => {
+  const donor_id = req.user.id;
 
-  // status breakdown (pending / accepted / declined)
-  const statusQuery = `
-    SELECT status, COUNT(*) as count
+  const query = `
+    SELECT 
+      COUNT(*) AS total_donations,
+      IFNULL((
+        SELECT SUM(co2_saved)
+        FROM DISTRIBUTION_RECORD dr
+        JOIN DONATION_TRANSACTION dt ON dr.transaction_id = dt.transaction_id
+        WHERE dt.donor_id = ?
+      ), 0) AS total_co2,
+      IFNULL((
+        SELECT SUM(landfill_saved)
+        FROM DISTRIBUTION_RECORD dr
+        JOIN DONATION_TRANSACTION dt ON dr.transaction_id = dt.transaction_id
+        WHERE dt.donor_id = ?
+      ), 0) AS total_landfill,
+      IFNULL((
+        SELECT SUM(beneficiaries)
+        FROM DISTRIBUTION_RECORD dr
+        JOIN DONATION_TRANSACTION dt ON dr.transaction_id = dt.transaction_id
+        WHERE dt.donor_id = ?
+      ), 0) AS total_beneficiaries
     FROM DONATION_TRANSACTION
-    WHERE donor_id = ?
-    GROUP BY status
+    WHERE donor_id = ?;
   `;
 
-  db.all(distributedQuery, [donor_id], (distErr, distributedRows) => {
-    if (distErr) {
-      return res.status(500).json({
-        errMessage: "Database error fetching donor distribution metrics",
-        error: distErr.message,
-      });
-    }
-
-    // sustainability totals
-    const total_co2 = distributedRows.reduce((a, r) => a + (r.co2_saved || 0), 0);
-    const total_landfill = distributedRows.reduce((a, r) => a + (r.landfill_saved || 0), 0);
-    const total_beneficiaries = distributedRows.reduce((a, r) => a + (r.beneficiaries || 1), 0);
-
-    // category breakdown
-    const categoryCounts = {};
-    distributedRows.forEach(r => {
-      if (!categoryCounts[r.category]) categoryCounts[r.category] = 0;
-      categoryCounts[r.category] += 1;
-    });
-
-    // monthly distribution trend
-    const monthly = {};
-    distributedRows.forEach(r => {
-      const month = (r.distributed_at || "").slice(0,7); // "YYYY-MM"
-      if (!monthly[month]) monthly[month] = 0;
-      monthly[month] += 1;
-    });
-
-    db.all(statusQuery, [donor_id], (statusErr, statusRows) => {
-      if (statusErr) {
-        return res.status(500).json({
-          errMessage: "Database error fetching status breakdown",
-          error: statusErr.message,
-        });
-      }
-
-      return res.status(200).json({
-        total_distributed: distributedRows.length,
-        sustainability: {
-          co2_saved: total_co2,
-          landfill_saved: total_landfill,
-          beneficiaries: total_beneficiaries,
-        },
-        category_breakdown: categoryCounts,
-        monthly_trend: monthly,
-        status_breakdown: statusRows,
-      });
-    });
+  db.get(query, [donor_id, donor_id, donor_id, donor_id], (err, row) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(row);
   });
 };
 
+// STATUS BREAKDOWN
+const getDonationStatusBreakdown = (req, res) => {
+  const donor_id = req.user.id;
+
+  const query = `
+    SELECT status, COUNT(*) AS count
+    FROM DONATION_TRANSACTION
+    WHERE donor_id = ?
+    GROUP BY status;
+  `;
+
+  db.all(query, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
+
+// CATECORY BREAKDOWN
+const getDonationCategoryBreakdown = (req, res) => {
+  const donor_id = req.user.id;
+
+  const query = `
+    SELECT category, COUNT(*) AS count
+    FROM DONATION_TRANSACTION
+    WHERE donor_id = ?
+    GROUP BY category;
+  `;
+
+  db.all(query, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
+
+// MONTHLY CO2 SAVED (value to donor)
+const getMonthlyImpact = (req, res) => {
+  const donor_id = req.user.id;
+
+  const query = `
+    SELECT 
+      strftime('%Y-%m', dr.distributed_at) AS month,
+      SUM(dr.co2_saved) AS total_co2,
+      SUM(dr.landfill_saved) AS total_landfill,
+      SUM(dr.beneficiaries) AS beneficiaries
+    FROM DISTRIBUTION_RECORD dr
+    JOIN DONATION_TRANSACTION dt ON dr.transaction_id = dt.transaction_id
+    WHERE dt.donor_id = ?
+    GROUP BY month
+    ORDER BY month;
+  `;
+
+  db.all(query, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
 
 module.exports = {
   submitDonationRequest,
@@ -345,5 +366,8 @@ module.exports = {
   markAllRead,
   getDonationHistory,
   generateDonationDescription,
-  getDonorMetrics,
+  getDonorSummary,
+  getDonationStatusBreakdown,
+  getDonationCategoryBreakdown,
+  getMonthlyImpact,
 };
