@@ -479,6 +479,43 @@ const distributeInventoryItem = (req, res) => {
   });
 };
 
+const getDistributionRecords = (req, res) => {
+  const { org_id } = req.params;
+
+  if (!org_id) {
+    return res.status(400).json({ errMessage: "Organisation ID is required" });
+  }
+
+  const query = `
+  SELECT 
+    quantity_distributed, 
+    beneficiary_group, 
+    distributed_at, 
+    co2_saved, 
+    landfill_saved, 
+    beneficiaries, 
+    CONCAT(first_name, ' ', last_name) AS staff_name,
+    item_name, 
+    category, 
+    size, 
+    item_condition
+  FROM DISTRIBUTION_RECORD DR 
+  JOIN USER U ON DR.handled_by_staff_id = U.user_id
+  JOIN DONATION_TRANSACTION DT on DR.transaction_id = DT.transaction_id
+  WHERE DR.org_id = ?;`;
+
+  db.all(query, [org_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        errMessage: "Failed to fetch distribution records",
+        error: err.message,
+      });
+    }
+
+    return res.status(200).json(rows);
+  });
+};
+
 // ORGANISATION METRICS
 
 // SUMMARY
@@ -598,6 +635,7 @@ module.exports = {
   getInventoryItemById,
   removeInventoryItem,
   distributeInventoryItem,
+  getDistributionRecords,
   getOrgSummary,
   getOrgStatusBreakdown,
   getOrgCategoryBreakdown,

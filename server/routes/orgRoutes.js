@@ -13,11 +13,28 @@ router.post(
 
 // inventory routes
 router.get("/:org_id/inventory", verifyToken, orgController.getInventoryItems);
-router.get("/:org_id/inventory/:inv_id", verifyToken, orgController.getInventoryItemById);
-router.delete("/:org_id/inventory/:inv_id", verifyToken, orgController.removeInventoryItem);
+router.get(
+  "/:org_id/inventory/:inv_id",
+  verifyToken,
+  orgController.getInventoryItemById
+);
+router.delete(
+  "/:org_id/inventory/:inv_id",
+  verifyToken,
+  orgController.removeInventoryItem
+);
 
 // distribution routes
-router.post("/:org_id/distribute/:inv_id", verifyToken, orgController.distributeInventoryItem);
+router.post(
+  "/:org_id/distribute/:inv_id",
+  verifyToken,
+  orgController.distributeInventoryItem
+);
+router.get(
+  "/:org_id/distribution-records",
+  verifyToken,
+  orgController.getDistributionRecords
+);
 
 // metrics routes
 router.get("/:org_id/dashboard/summary", verifyToken, orgController.getOrgSummary);
