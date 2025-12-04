@@ -1,132 +1,92 @@
-import {
-  Box,
-  SimpleGrid,
-  Heading,
-  Spinner,
-  Stat,
-  StatLabel,
-  StatNumber,
-  useColorModeValue,
-} from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { SimpleGrid, Box, Text, Flex, Spinner } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
-import { useAuth } from "../../../auth/authContext";
 
-import ChartLine from "../../../components/charts/lineChart";
-import ChartPie from "../../../components/charts/pieChart";
-import ChartDoughnut from "../../../components/charts/doughnutChart";
-import VerticalChart from "../../../components/charts/verticalChart";
-
-import { buildDonorDashboardMetrics } from "../../../components/metrics/donorMetrics";
+import DoughnutChartStatus from "../../../components/charts/donor/doughbutChart";
+import PieChartCategories from "../../../components/charts/donor/pieChart";
+import BarChartImpact from "../../../components/charts/donor/barChart";
+import RadialLandfillGauge from "../../../components/charts/donor/raddialLandfillGauge";
 
 export default function DonorHome() {
-  const { user } = useAuth();
-  const [metrics, setMetrics] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [statusData, setStatusData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
+  const [impactData, setImpactData] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
-  const cardBg = useColorModeValue("white", "gray.800");
-
   useEffect(() => {
-    if (!user?.user_id) return;
+    loadAll();
+  }, []);
 
-    api
-      .get(`/donor/${user.user_id}/metrics`)
-      .then((res) => setMetrics(buildDonorDashboardMetrics(res.data)))
-      .catch((err) => console.error("Metrics error:", err))
-      .finally(() => setLoading(false));
-  }, [user?.user_id]);
+  const loadAll = async () => {
+    try {
+      const [sum, status, category, impact] = await Promise.all([
+        api.get("/donor/dashboard/summary"),
+        api.get("/donor/dashboard/status"),
+        api.get("/donor/dashboard/categories"),
+        api.get("/donor/dashboard/monthly-impact"),
+      ]);
 
-  if (loading)
+      setSummary(sum.data);
+      setStatusData(status.data);
+      setCategoryData(category.data);
+      setImpactData(impact.data);
+    } catch (err) {
+      console.error("Donor dashboard error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !summary) {
     return (
-      <Box textAlign="center" mt={20}>
-        <Spinner size="xl" color="green.500" />
-      </Box>
+      <Flex justify="center" align="center" h="80vh">
+        <Spinner size="xl" color="brand.green" />
+      </Flex>
     );
-
-  if (!metrics) return null;
-
-  const { kpis, charts } = metrics;
+  }
 
   return (
-    <Box p={8}>
-      {/* KPI CARDS */}
-      <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6} mb={10}>
-        <StatCard label="Total Donations" value={kpis.total_donations} />
-        <StatCard label="Items Distributed" value={kpis.total_distributed} />
-        <StatCard label="CO₂ Saved (kg)" value={kpis.co2_saved.toFixed(1)} />
-        <StatCard label="People Helped" value={kpis.beneficiaries} />
+    <Box>
+      {/* SUMMARY CARDS */}
+      <SimpleGrid columns={[1, 2, 4]} spacing={6} mb={8}>
+        <StatCard label="Total Donations" value={summary.total_donations} />
+        <StatCard label="CO₂ Saved (kg)" value={summary.total_co2.toFixed(1)} />
+        <StatCard
+          label="Landfill Saved (kg)"
+          value={summary.total_landfill.toFixed(1)}
+        />
+        <StatCard label="People Helped" value={summary.total_beneficiaries} />
       </SimpleGrid>
 
       {/* CHARTS */}
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-        <ChartCard title="CO₂ Saved Over Time">
-          <ChartLine data={charts.co2_over_time} dataKey="value" xKey="label" />
-        </ChartCard>
-
-        <ChartCard title="Category Breakdown">
-          <ChartPie
-            data={charts.category_breakdown}
-            dataKey="value"
-            nameKey="label"
-          />
-        </ChartCard>
-
-        <ChartCard title="Donation Status Breakdown">
-          <ChartDoughnut data={charts.status_breakdown} dataKey="value" />
-        </ChartCard>
-
-        <ChartCard title="Monthly Distribution Activity">
-          <VerticalChart
-            data={charts.monthly_distribution}
-            dataKey="value"
-            categoryKey="label"
-          />
-        </ChartCard>
+      <SimpleGrid columns={[1, 2]} spacing={8} minChildWidth="350px">
+        <DoughnutChartStatus data={statusData} loading={loading} />
+        <PieChartCategories data={categoryData} loading={loading} />
+        <BarChartImpact data={impactData} loading={loading} />
+        <RadialLandfillGauge data={impactData} loading={loading} />
       </SimpleGrid>
     </Box>
   );
 }
 
-// reusable UI components
 function StatCard({ label, value }) {
-  const cardBg = useColorModeValue("white", "gray.800");
   return (
     <Box
       p={5}
+      bg="white"
       borderRadius="lg"
-      bg={cardBg}
-      boxShadow="lg"
-      textAlign="center"
-      transition="0.2s"
-      _hover={{ transform: "translateY(-3px)", boxShadow: "xl" }}
+      shadow="sm"
+      border="1px solid"
+      borderColor="gray.200"
     >
-      <Stat>
-        <StatLabel fontSize="sm" color="gray.500">
-          {label}
-        </StatLabel>
-        <StatNumber fontSize="2xl" color="green.600">
-          {value}
-        </StatNumber>
-      </Stat>
-    </Box>
-  );
-}
-
-function ChartCard({ title, children }) {
-  const cardBg = useColorModeValue("white", "gray.800");
-  return (
-    <Box
-      p={5}
-      borderRadius="lg"
-      bg={cardBg}
-      boxShadow="md"
-      transition="0.2s"
-      _hover={{ boxShadow: "lg" }}
-    >
-      <Heading size="md" mb={4} color="green.700">
-        {title}
-      </Heading>
-      <Box minH="260px">{children}</Box>
+      <Text fontSize="sm" color="gray.500" mb={1}>
+        {label}
+      </Text>
+      <Text fontSize="2xl" fontWeight="700" color="brand.green">
+        {value}
+      </Text>
     </Box>
   );
 }
