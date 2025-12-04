@@ -109,7 +109,11 @@ export default function Verify2FA() {
       else if (role === "Staff") navigate("/staff");
       else navigate("/admin");
     } catch (err) {
-      toast.error(err.response?.data?.errMessage || "Invalid code");
+      toast.error(
+        err.response?.data?.errMessage?.code ||
+          err.response?.data?.errMessage ||
+          "Invalid code"
+      );
     }
   };
 
