@@ -12,14 +12,35 @@ router.post(
 );
 
 // org metrics
-router.get("/:org_id/metrics", verifyToken, orgController.getOrganisationMetrics);
+router.get(
+  "/:org_id/metrics",
+  verifyToken,
+  orgController.getOrganisationMetrics
+);
 
 // inventory routes
 router.get("/:org_id/inventory", verifyToken, orgController.getInventoryItems);
-router.get("/:org_id/inventory/:inv_id", verifyToken, orgController.getInventoryItemById);
-router.delete("/:org_id/inventory/:inv_id", verifyToken, orgController.removeInventoryItem);
+router.get(
+  "/:org_id/inventory/:inv_id",
+  verifyToken,
+  orgController.getInventoryItemById
+);
+router.delete(
+  "/:org_id/inventory/:inv_id",
+  verifyToken,
+  orgController.removeInventoryItem
+);
 
 // distribution routes
-router.post("/:org_id/distribute/:inv_id", verifyToken, orgController.distributeInventoryItem);
+router.post(
+  "/:org_id/distribute/:inv_id",
+  verifyToken,
+  orgController.distributeInventoryItem
+);
+router.get(
+  "/:org_id/distribution-records",
+  verifyToken,
+  orgController.getDistributionRecords
+);
 
 module.exports = router;
