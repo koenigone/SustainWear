@@ -1,9 +1,9 @@
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Box } from "@chakra-ui/react";
 import ChartCard from "../chartCard";
 import ChartEmpty from "../chartEmpty";
 
-const COLORS = ["#2ecc71", "#f1c40f", "#e74c3c"]; // accepted / pending / declined
+const COLORS = ["#2ecc71", "#f1c40f", "#e74c3c"];
 
 export default function DoughnutChartStatus({ data, loading }) {
   const empty = !data || data.length === 0;
@@ -13,37 +13,26 @@ export default function DoughnutChartStatus({ data, loading }) {
       {empty ? (
         <ChartEmpty message="No donation activity yet." />
       ) : (
-        <Box
-          w="100%"
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <PieChart width={320} height={280}>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              innerRadius={55}
-              nameKey="status" // label for legend
-              dataKey="count" // numeric value
-              label
-            >
-              {data.map((entry, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
+        <Box w="100%" minH="260px" h="100%">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                innerRadius="55%"
+                outerRadius="80%"
+                dataKey="count"
+                nameKey="status"
+                label
+              >
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
 
-            <Tooltip formatter={(value) => `${value} donations`} />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              formatter={(value) =>
-                value.charAt(0).toUpperCase() + value.slice(1)
-              }
-            />
-          </PieChart>
+              <Tooltip />
+              <Legend verticalAlign="bottom" height={30} />
+            </PieChart>
+          </ResponsiveContainer>
         </Box>
       )}
     </ChartCard>

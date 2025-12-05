@@ -261,9 +261,6 @@ const DistributionRecords = () => {
   return (
     <Box>
       <VStack>
-        <Heading size="lg" color="brand.green" mb={6}>
-          Distribution Records
-        </Heading>
         {/* Controls */}
         <HStack spacing={4} alignSelf="flex-start">
           <Button

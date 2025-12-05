@@ -3,12 +3,15 @@ import { Box, Heading, Spinner } from "@chakra-ui/react";
 export default function ChartCard({ title, loading, children }) {
   return (
     <Box
+      p={5}
       bg="white"
       borderRadius="lg"
-      p={5}
-      shadow="sm"
       border="1px solid"
       borderColor="gray.200"
+      shadow="sm"
+      height="100%"
+      display="flex"
+      flexDirection="column"
     >
       <Heading size="md" mb={4} color="brand.green">
         {title}

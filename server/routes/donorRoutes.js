@@ -24,5 +24,7 @@ router.get("/dashboard/summary", verifyToken, donorController.getDonorSummary);
 router.get("/dashboard/status", verifyToken, donorController.getDonationStatusBreakdown);
 router.get("/dashboard/categories", verifyToken, donorController.getDonationCategoryBreakdown);
 router.get("/dashboard/monthly-impact", verifyToken, donorController.getMonthlyImpact);
+router.get("/dashboard/recent-activity", verifyToken, donorController.getRecentActivity);
+router.get("/dashboard/leaderboard", verifyToken, donorController.getDonorLeaderboard);
 
 module.exports = router;

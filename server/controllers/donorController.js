@@ -359,6 +359,115 @@ const getMonthlyImpact = (req, res) => {
   });
 };
 
+// RECENT ACTIVITY FEED
+const getRecentActivity = (req, res) => {
+  const donor_id = req.user.id;
+
+  const query = `
+    -- Donation submissions + decisions
+    SELECT
+      dt.transaction_id AS id,
+      dt.item_name,
+      dt.status AS action_type,
+      dt.submitted_at AS timestamp,
+      dt.reason AS details,
+      NULL AS beneficiary_group,
+      NULL AS co2_saved,
+      NULL AS landfill_saved,
+      NULL AS beneficiaries
+    FROM DONATION_TRANSACTION dt
+    WHERE dt.donor_id = ?
+
+    UNION ALL
+
+    -- Distribution events
+    SELECT
+      dr.transaction_id AS id,
+      (SELECT item_name FROM DONATION_TRANSACTION WHERE transaction_id = dr.transaction_id),
+      'Distributed' AS action_type,
+      dr.distributed_at AS timestamp,
+      NULL AS details,
+      dr.beneficiary_group,
+      dr.co2_saved,
+      dr.landfill_saved,
+      dr.beneficiaries
+    FROM DISTRIBUTION_RECORD dr
+    JOIN DONATION_TRANSACTION dt ON dt.transaction_id = dr.transaction_id
+    WHERE dt.donor_id = ?
+
+    ORDER BY timestamp DESC
+    LIMIT 5
+  `;
+
+  db.all(query, [donor_id, donor_id], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+    res.json(rows);
+  });
+};
+
+// DONORS LEADERBOARD
+const getDonorLeaderboard = (req, res) => {
+  const donor_id = req.user.id;
+
+  const query = `
+    SELECT
+      u.user_id,
+      u.first_name || ' ' || u.last_name AS name,
+
+      -- COUNT OF ACCEPTED DONATIONS
+      (
+        SELECT COUNT(*)
+        FROM DONATION_TRANSACTION dt
+        WHERE dt.donor_id = u.user_id
+        AND dt.status = 'Accepted'
+      ) AS accepted_count
+
+    FROM USER u
+    WHERE u.role = 'Donor'
+
+    ORDER BY accepted_count DESC
+    LIMIT 7;
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) return res.status(500).json({ err: err.message });
+
+    // compute current donor rank (among ALL donors)
+    const rankQuery = `
+      SELECT
+        u.user_id,
+        (
+          SELECT COUNT(*)
+          FROM DONATION_TRANSACTION dt
+          WHERE dt.donor_id = u.user_id
+          AND dt.status = 'Accepted'
+        ) AS accepted_count
+      FROM USER u
+      WHERE u.role = 'Donor'
+      ORDER BY accepted_count DESC
+    `;
+
+    db.all(rankQuery, [], (err2, allRows) => {
+      if (err2) return res.status(500).json({ err: err2.message });
+
+      const rank =
+        allRows.findIndex((r) => r.user_id === donor_id) + 1;
+
+      const currentUser = rows.find((r) => r.user_id === donor_id) || {
+        user_id: donor_id,
+        name: "You",
+        accepted_count: 0,
+      };
+
+      res.json({
+        rank,
+        leaderboard: rows,
+        currentUser,
+      });
+    });
+  });
+};
+
 module.exports = {
   submitDonationRequest,
   getDonorNotifications,
@@ -370,4 +479,6 @@ module.exports = {
   getDonationStatusBreakdown,
   getDonationCategoryBreakdown,
   getMonthlyImpact,
+  getRecentActivity,
+  getDonorLeaderboard,
 };

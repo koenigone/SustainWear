@@ -256,7 +256,7 @@ const getInventoryItems = (req, res) => {
       description,
       added_at
     FROM INVENTORY
-    WHERE org_id = ?
+    WHERE org_id = ? AND is_active = 1
     ORDER BY added_at DESC
   `;
 

@@ -74,7 +74,7 @@ export default function StaffDashboard() {
     },
     {
       label: "Settings",
-      descriptiveTitle: "Manage Staff Settings",
+      descriptiveTitle: "Account Settings",
       customLabel: (
         <HStack spacing={2}>
           <FaGear size="18" color="#38A169" />

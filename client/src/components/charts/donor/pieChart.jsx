@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Box } from "@chakra-ui/react";
 import ChartCard from "../chartCard";
 import ChartEmpty from "../chartEmpty";
@@ -11,34 +11,26 @@ export default function PieChartCategories({ data, loading }) {
   return (
     <ChartCard title="Donation Categories" loading={loading}>
       {empty ? (
-        <ChartEmpty message="No donation categories recorded yet." />
+        <ChartEmpty message="No donation categories yet." />
       ) : (
-        <Box w="100%" display="flex" justifyContent="center" alignItems="center">
-          <PieChart width={320} height={280}>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              outerRadius={110}
-              nameKey="category"   // show category names in the legend
-              dataKey="count"      // numeric value for each slice
-              label                // display labels on slice
-            >
-              {data.map((entry, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-
-            <Tooltip formatter={(value, name) => [`${value} items`, "Items"]} />
-
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              formatter={(value) =>
-                value.charAt(0).toUpperCase() + value.slice(1)
-              }
-            />
-          </PieChart>
+        <Box w="100%" minH="260px" h="100%">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                outerRadius="80%"
+                dataKey="count"
+                nameKey="category"
+                label
+              >
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend verticalAlign="bottom" height={30} />
+            </PieChart>
+          </ResponsiveContainer>
         </Box>
       )}
     </ChartCard>

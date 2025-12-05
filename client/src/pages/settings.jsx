@@ -74,10 +74,6 @@ export default function Settings() {
         w={["100%", "400px"]}
         color="brand.green"
       >
-        <Heading size="lg" mb={4}>
-          Account Settings
-        </Heading>
-
         <VStack w="100%" spacing={3}>
           <Heading size="sm">Change Name</Heading>
           <Input
