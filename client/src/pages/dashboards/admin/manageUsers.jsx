@@ -11,7 +11,6 @@ import {
   Button,
   Badge,
   Spinner,
-  Heading,
   HStack,
   Input,
   useDisclosure,
@@ -19,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
-import ConfirmToggleUserModal from "../../../components/modals/confirmToggleUserModal.jsx";
+import ConfirmToggleUserModal from "../../../components/modals/admin/confirmToggleUserModal";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);

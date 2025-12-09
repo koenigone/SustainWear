@@ -6,13 +6,13 @@ import {
   Input,
   Select,
   Textarea,
-  Image,
   VStack,
   useToast,
 } from "@chakra-ui/react";
 import { IoSparkles } from "react-icons/io5";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import api from "../../../api/axiosClient";
+import MultiImageUpload from "../../../components/multiImageUpload";
 
 export default function DonateItem() {
   const toast = useToast();
@@ -26,35 +26,13 @@ export default function DonateItem() {
     size: "",
     gender: "",
   });
-  const fileInputRef = useRef(null); // empty photo field
-
-  const [imageFile, setImageFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [images, setImages] = useState([]);
   const [organisations, setOrganisations] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // handle Image Upload
-  const handleImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const allowed = ["image/jpeg", "image/jpg", "image/png"];
-    if (!allowed.includes(file.type)) {
-      toast({
-        status: "error",
-        title: "Invalid file",
-        description: "Only JPG, JPEG, or PNG allowed.",
-      });
-      return;
-    }
-
-    setImageFile(file);
-    setPreview(URL.createObjectURL(file));
   };
 
   // fetch organisations on load
@@ -111,13 +89,16 @@ export default function DonateItem() {
 
   // hnadle form submission
   const handleSubmit = async () => {
-    if (!imageFile)
+    // Require at least 1 image
+    if (images.length === 0) {
       return toast({
         status: "error",
-        title: "Image Required",
-        description: "Please upload an item image.",
+        title: "Images Required",
+        description: "Please upload at least 1 image.",
       });
+    }
 
+    // Validate text fields
     for (const key in form) {
       if (!form[key]) {
         return toast({
@@ -129,14 +110,16 @@ export default function DonateItem() {
     }
 
     const formData = new FormData();
-    formData.append("org_id", form.org_id);
-    formData.append("item_name", form.item_name);
-    formData.append("description", form.description);
-    formData.append("category", form.category);
-    formData.append("item_condition", form.item_condition);
-    formData.append("size", form.size);
-    formData.append("gender", form.gender);
-    formData.append("photo", imageFile);
+
+    // append form fields
+    Object.keys(form).forEach((key) => {
+      formData.append(key, form[key]);
+    });
+
+    // append images
+    images.forEach((img) => {
+      formData.append("photos", img.file);
+    });
 
     try {
       setIsSubmitting(true);
@@ -151,6 +134,7 @@ export default function DonateItem() {
         description: "Your donation request has been sent.",
       });
 
+      // reset form after submit
       setForm({
         org_id: "",
         item_name: "",
@@ -160,12 +144,8 @@ export default function DonateItem() {
         size: "",
         gender: "",
       });
-      setPreview(null);
-      setImageFile(null);
-
-      if (fileInputRef.current) { // clear photo input on successful submission
-        fileInputRef.current.value = "";
-      }
+      setImages([]);
+      MultiImageUpload.clear(); // clear image input
     } catch (err) {
       toast({
         status: "error",
@@ -410,25 +390,16 @@ export default function DonateItem() {
           </Select>
         </FormControl>
 
-        {/* Upload Image */}
-        <FormControl>
-          <FormLabel>Upload Image</FormLabel>
-          <Input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImage}
-          />
+        {/* Upload Images */}
+        <FormControl mb={4}>
+          <FormLabel>Upload Images</FormLabel>
 
-          {preview && (
-            <Image
-              src={preview}
-              mt={3}
-              borderRadius="md"
-              maxH="200px"
-              objectFit="cover"
-            />
-          )}
+          <MultiImageUpload
+            images={images}
+            setImages={setImages}
+            max={4}
+            toast={toast}
+          />
         </FormControl>
 
         <Button

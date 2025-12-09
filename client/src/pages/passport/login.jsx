@@ -12,34 +12,45 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import api from "../../api/axiosClient";
-import toast from "react-hot-toast";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../auth/authContext";
-import PasswordResetModal from "../../components/modals/resetPasswordModal";
+import PasswordResetModal from "../../components/modals/user/resetPasswordModal";
+import { validateLogin } from "../../rules/validateLogin";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [errorMessage, setErrorMessage] = useState("");
+
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const passwordModal = useDisclosure();
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setErrorMessage(""); // clear inline message while typing
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // FRONTEND VALIDATION
+    const validation = validateLogin(form);
+    if (!validation.valid) {
+      setErrorMessage(validation.message);
+      return;
+    }
+
     try {
       const res = await api.post("/login", form);
 
+      // 2FA CHECK
       if (res.data.tempToken) {
         localStorage.setItem("tempToken", res.data.tempToken);
         navigate("/verifyTwoFactors");
         return;
       }
 
-      toast.success("Login successful!");
-      localStorage.setItem("token", res.data.token); // save token
+      localStorage.setItem("token", res.data.token);
 
       const user = res.data.user;
       setUser({
@@ -49,53 +60,79 @@ export default function Login() {
         role: user.role,
       });
 
-      // redirect based on role
+      // redirect by role
       if (user.role === "Donor") navigate("/donor");
       else if (user.role === "Staff") navigate("/staff");
       else if (user.role === "Admin") navigate("/admin");
     } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.errMessage || "Invalid credentials");
+      const msg =
+        err.response?.data?.errMessage ||
+        err.response?.data?.message ||
+        "Invalid credentials";
+
+      setErrorMessage(msg);
     }
   };
+
+  // disable button when fields empty
+  const isFormInvalid = !form.email || !form.password;
 
   return (
     <Center minH="100vh" bg="brand.beige">
       <Box bg="brand.green" p={10} rounded="md" color="white" w="sm">
-        <Heading size="lg" textAlign="center" mb={6}>
+        <Heading size="lg" textAlign="center" mb={4}>
           Login
         </Heading>
+
+        {/* ERROR MESSAGE */}
+        {errorMessage && (
+          <Text
+            bg="red.100"
+            color="red.700"
+            p={2}
+            mb={3}
+            rounded="md"
+            fontSize="sm"
+            textAlign="center"
+          >
+            {errorMessage}
+          </Text>
+        )}
+
         <form onSubmit={handleSubmit}>
           <VStack spacing={4}>
             <Input
               placeholder="example@gmail.com"
-              _placeholder={{ color: "gray.400" }}
               name="email"
+              value={form.email}
               onChange={handleChange}
               bg="white"
               color="black"
+              _placeholder={{ color: "gray.400" }}
             />
+
             <Input
               placeholder="Password"
-              _placeholder={{ color: "gray.400" }}
               name="password"
               type="password"
+              value={form.password}
               onChange={handleChange}
               bg="white"
               color="black"
+              _placeholder={{ color: "gray.400" }}
             />
-            <Button type="submit" bg="white" color="brand.green">
+
+            <Button
+              type="submit"
+              bg="white"
+              color="brand.green"
+              w="100%"
+              isDisabled={isFormInvalid}
+            >
               Login
             </Button>
 
-            <Flex
-              direction="column"
-              align="center"
-              justify="center"
-              w="100%"
-              fontSize="sm"
-              gap={2}
-            >
+            <Flex direction="column" align="center" fontSize="sm" gap={2}>
               <Link
                 opacity="80%"
                 onClick={passwordModal.onOpen}
@@ -114,7 +151,6 @@ export default function Login() {
               </Link>
             </Flex>
 
-            {/* RESET PASSWORD MODAL */}
             <PasswordResetModal
               isOpen={passwordModal.isOpen}
               onClose={passwordModal.onClose}

@@ -10,7 +10,7 @@ function sendDonorNotification(user_id, title, message, related_transaction_id =
     if (err) {
       console.error("Notification Insert Error:", err.message);
     } else {
-      console.log("Notification inserted with ID:", this.lastID);
+      console.log("Notification inserted");
     }
   });
 }

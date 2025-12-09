@@ -3,7 +3,7 @@ import { Box } from "@chakra-ui/react";
 import ChartCard from "../chartCard";
 import ChartEmpty from "../chartEmpty";
 
-const COLORS = ["#2ecc71", "#f1c40f", "#e74c3c"]; // Accepted / Pending / Declined
+const COLORS = ["#2ecc71", "#f1c40f", "#e74c3c"]; // accepted / pending / declined
 
 export default function OrgStatusChart({ data, loading }) {
   const empty = !data || data.length === 0;

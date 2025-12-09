@@ -20,7 +20,7 @@ export default function OrgDistributionChart({ data, loading }) {
         <ChartEmpty message="No items have been distributed yet." />
       ) : (
         <Box w="100%" minH="300px" h="300px">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart
               data={data}
               margin={{ top: 10, right: 20, left: 0, bottom: 10 }}

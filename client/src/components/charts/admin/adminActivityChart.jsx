@@ -1,10 +1,11 @@
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
-  Tooltip,
   CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { Box } from "@chakra-ui/react";
@@ -17,15 +18,15 @@ export default function AdminActivityChart({ data, loading }) {
   return (
     <ChartCard title="Monthly Platform Activity" loading={loading}>
       {empty ? (
-        <ChartEmpty message="Platform activity will appear once donations begin." />
+        <ChartEmpty message="Activity will appear once donations begin." />
       ) : (
         <Box w="100%" minH="300px" h="300px">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
 
-              <XAxis dataKey="month" tick={{ fill: "#555" }} />
-              <YAxis tick={{ fill: "#555" }} />
+              <XAxis dataKey="month" tick={{ fill: "#444" }} />
+              <YAxis tick={{ fill: "#444" }} />
 
               <Tooltip
                 contentStyle={{
@@ -35,28 +36,12 @@ export default function AdminActivityChart({ data, loading }) {
                 }}
               />
 
-              <Line
-                type="monotone"
-                dataKey="submitted"
-                stroke="#3498db"
-                strokeWidth={3}
-                name="Submitted"
-              />
-              <Line
-                type="monotone"
-                dataKey="accepted"
-                stroke="#2ecc71"
-                strokeWidth={3}
-                name="Accepted"
-              />
-              <Line
-                type="monotone"
-                dataKey="distributed"
-                stroke="#9b59b6"
-                strokeWidth={3}
-                name="Distributed"
-              />
-            </LineChart>
+              <Legend />
+
+              <Bar dataKey="submitted" fill="#3498db" name="Submitted" />
+              <Bar dataKey="accepted" fill="#2ecc71" name="Accepted" />
+              <Bar dataKey="distributed" fill="#9b59b6" name="Distributed" />
+            </BarChart>
           </ResponsiveContainer>
         </Box>
       )}

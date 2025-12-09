@@ -10,9 +10,9 @@ import {
   Flex,
 } from "@chakra-ui/react";
 
+// dashboard layout is used to form all types of dashboards (donor, staff and admin)
 export default function DashboardLayout({ tabs }) {
   const [tabIndex, setTabIndex] = useState(0);
-
   return (
     <Layout title={tabs[tabIndex].descriptiveTitle}>
       <Flex direction="column" flex="1" overflow="hidden">

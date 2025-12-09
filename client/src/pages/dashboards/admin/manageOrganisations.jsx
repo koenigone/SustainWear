@@ -18,10 +18,10 @@ import {
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
 
-import AddOrgModal from "../../../components/modals/addOrgModal.jsx";
-import ConfirmToggleOrgModal from "../../../components/modals/confirmToggleOrgModal.jsx";
-import ConfirmOrgDeletionModal from "../../../components/modals/confirmOrgDeletionModal.jsx";
-import ManageStaffModal from "../../../components/modals/manageStaffModal.jsx";
+import AddOrgModal from "../../../components/modals/admin/addOrgModal";
+import ConfirmToggleOrgModal from "../../../components/modals/admin/confirmToggleOrgModal";
+import ManageStaffModal from "../../../components/modals/admin/manageStaffModal";
+import { validateOrganisationForm } from "../../../rules/validateOrganisationForm.js";
 
 export default function ManageOrganisations() {
   const [orgs, setOrgs] = useState([]);
@@ -33,14 +33,11 @@ export default function ManageOrganisations() {
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [staffList, setStaffList] = useState([]);
 
-  const [orgToDelete, setOrgToDelete] = useState(null);
   const [orgToToggle, setOrgToToggle] = useState(null);
-
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [orgError, setOrgError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addModal = useDisclosure();
-  const deleteModal = useDisclosure();
   const toggleModal = useDisclosure();
   const staffModal = useDisclosure();
 
@@ -88,16 +85,28 @@ export default function ManageOrganisations() {
 
   // create new organisation
   const handleOrgCreate = async () => {
+    const validation = validateOrganisationForm(newOrg);
+
+    if (!validation.valid) {
+      setOrgError(validation.message); // show error inside modal
+      return;
+    }
+
+    setOrgError(""); // clear errors
     try {
       await api.post("/admin/organisations", newOrg);
-      toast.success("Organisation added successfully");
-      addModal.onClose();
+      toast.success("Organisation added successfully", {
+        position: "bottom-center",
+      });
 
+      addModal.onClose();
       fetchOrganisations();
       setNewOrg(initialOrgData);
     } catch (err) {
-      toast.error(
-        err.response?.data?.errMessage || "Failed to create organisation"
+      setOrgError(
+        err.response?.data?.message ||
+          err.response?.data?.errMessage ||
+          "Failed to create organisation"
       );
     }
   };
@@ -132,27 +141,6 @@ export default function ManageOrganisations() {
       setIsProcessing(false);
       toggleModal.onClose();
       setOrgToToggle(null);
-    }
-  };
-
-  // confirm delete
-  const confirmOrgDelete = (org) => {
-    setOrgToDelete(org);
-    deleteModal.onOpen();
-  };
-
-  // delete organisation
-  const handleOrgDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await api.delete(`/admin/organisations/${orgToDelete.org_id}`);
-      toast.success("Organisation deleted");
-      fetchOrganisations();
-    } catch {
-      toast.error("Failed to delete organisation");
-    } finally {
-      setIsDeleting(false);
-      deleteModal.onClose();
     }
   };
 
@@ -198,19 +186,6 @@ export default function ManageOrganisations() {
   const removeStaff = async (staff) => {
     await api.delete(`/admin/org/${selectedOrg.org_id}/staff/${staff.user_id}`);
     setStaffList((prev) => prev.filter((s) => s.user_id !== staff.user_id));
-  };
-
-  // activate/deactivate staff
-  const toggleStaffActive = async (staff) => {
-    await api.put(`/admin/org/${selectedOrg.org_id}/staff/${staff.user_id}`, {
-      is_active: !staff.is_active,
-    });
-
-    setStaffList((prev) =>
-      prev.map((s) =>
-        s.user_id === staff.user_id ? { ...s, is_active: !s.is_active } : s
-      )
-    );
   };
 
   if (loading) return <Spinner size="xl" />;
@@ -293,15 +268,6 @@ export default function ManageOrganisations() {
                     >
                       {org.is_active ? "Deactivate" : "Activate"}
                     </Button>
-
-                    <Button
-                      size="sm"
-                      w="120px"
-                      colorScheme="red"
-                      onClick={() => confirmOrgDelete(org)}
-                    >
-                      Delete
-                    </Button>
                   </VStack>
                 </Td>
               </Tr>
@@ -317,6 +283,7 @@ export default function ManageOrganisations() {
         onSubmit={handleOrgCreate}
         orgData={newOrg}
         setOrgData={setNewOrg}
+        errorMessage={orgError}
       />
 
       {/* MANAGE STAFF */}
@@ -326,7 +293,6 @@ export default function ManageOrganisations() {
         selectedOrg={selectedOrg}
         staffList={staffList}
         removeStaff={removeStaff}
-        toggleStaffActive={toggleStaffActive}
         assignByEmail={assignStaffByEmail}
       />
 
@@ -337,16 +303,6 @@ export default function ManageOrganisations() {
         onConfirm={handleOrgToggleActive}
         target={orgToToggle}
         isLoading={isProcessing}
-      />
-
-      {/* DELETE ORG */}
-      <ConfirmOrgDeletionModal
-        isOpen={deleteModal.isOpen}
-        onClose={deleteModal.onClose}
-        onConfirm={handleOrgDelete}
-        target={orgToDelete}
-        entityName="organisation"
-        isLoading={isDeleting}
       />
     </Box>
   );

@@ -7,9 +7,9 @@ export default function DonorLeaderboard({
   currentUser,
 }) {
   const RANK_COLORS = {
-    0: { bg: "#FFF6C2", border: "#F2D675" }, // Gold
-    1: { bg: "#F2F2F2", border: "#D6D6D6" }, // Silver
-    2: { bg: "#FFE8C2", border: "#E4B778" }, // Bronze
+    0: { bg: "#FFF6C2", border: "#F2D675" }, // gold
+    1: { bg: "#F2F2F2", border: "#D6D6D6" }, // silver
+    2: { bg: "#FFE8C2", border: "#E4B778" }, // bronze
   };
 
   return (

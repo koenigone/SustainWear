@@ -32,8 +32,8 @@ export default function RadialLandfillGauge({ data, loading }) {
 
   return (
     <ChartCard title="Landfill Impact Gauge">
-      <Box w="100%" minH="260px" h="100%">
-        <ResponsiveContainer width="100%" height="100%">
+      <Box width="100%" height="260px">
+        <ResponsiveContainer width="100%" height={260}>
           <RadialBarChart
             data={chartData}
             innerRadius="70%"

@@ -20,7 +20,7 @@ export default function AdminOrgPerformanceChart({ data, loading }) {
         <ChartEmpty message="No organisation performance data yet." />
       ) : (
         <Box w="100%" minH="300px" h="300px">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart
               layout="vertical"
               data={data.slice(0, 5)} // top 5 orgs

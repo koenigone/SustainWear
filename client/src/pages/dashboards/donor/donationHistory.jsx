@@ -10,24 +10,38 @@ import {
   Th,
   Tbody,
   Td,
-  Tooltip,
   Image,
   SimpleGrid,
   Input,
+  Select,
+  Button,
+  useBreakpointValue,
+  Collapse,
 } from "@chakra-ui/react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axiosClient";
 import { TimeFormatter } from "../../../helpers/timeFormatter";
 
-const DonationHistory = () => {
+export default function DonationHistory() {
   const [loading, setLoading] = useState(true);
   const [donations, setDonations] = useState([]);
-  const [dataRows, setDataRows] = useState([]);
   const [rows, setRows] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [searchValue, setSearchValue] = useState("");
 
-  // toggles the visibility of an expanded rowe
+  // FILTER STATES
+  const [searchValue, setSearchValue] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCondition, setFilterCondition] = useState("");
+  const [filterSize, setFilterSize] = useState("");
+  const [filterGender, setFilterGender] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  // MOBILE FILTER TOGGLE
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
   const toggleIndex = (index) =>
     setExpandedIndex(expandedIndex === index ? null : index);
 
@@ -35,75 +49,15 @@ const DonationHistory = () => {
     "Item Name",
     "Category",
     "Status",
-    "Submitted At", // index 0-3
+    "Submitted At",
     "Description",
     "Size",
     "Condition",
     "Gender",
-    "Image", // index 4-8 for expanded
+    "Image",
   ];
 
-  // may be worth finding a way to abstract this sorting logic for reuse as its present in adminLog.jsx as well
-  // =======
-  const [rowSortOptions, setRowSortOptions] = useState(
-    tableHeaders.reduce(
-      (o, v, i) => ({
-        ...o,
-        [v.replace(" ", "_")]: { order: "desc", index: i, current: false },
-      }),
-      {}
-    )
-  );
-
-  /** @typedef {{order: ('asc' | 'desc'), index: number, current: boolean}} sortOptions*/
-
-  const sortRows = (colName) => {
-    /** @type {sortOptions} */
-    const { index: colIndex, current, order } = rowSortOptions[colName];
-
-    const newOrder = order === "asc" ? "desc" : "asc";
-
-    const isAsc = newOrder === "asc";
-
-    const sorted = [...rows].sort((a, b) => {
-      const aVal = a[colIndex];
-      const bVal = b[colIndex];
-
-      // Compare as number if both values are numbers
-      if (!isNaN(Number(aVal)) && !isNaN(Number(bVal)))
-        return isAsc
-          ? Number(aVal) - Number(bVal)
-          : Number(bVal) - Number(aVal);
-
-      // Fall back compare as strings
-      return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    });
-
-    setRows(sorted);
-    setRowSortOptions((previous) => {
-      const newSet = {};
-
-      // Reset the current property of each header
-      for (const key in previous) {
-        newSet[key] = {
-          ...previous[key],
-          current: false,
-        };
-      }
-
-      // overide current header pressed with new current and order
-      newSet[colName] = {
-        ...newSet[colName],
-        current: true,
-        order: newOrder,
-      };
-
-      return newSet;
-    });
-  };
-  // =======
-
-  // Fetch donation history on load
+  // FETCH DONATION HISTORY
   useEffect(() => {
     api
       .get("/donor/donations/history")
@@ -112,144 +66,337 @@ const DonationHistory = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Parse donations on data fetch and update data rows
-  useEffect(() => {
-    const parseDonations = () =>
-      donations.map((donation) => [
-        donation.item_name,
-        donation.category,
-        donation.status,
-        TimeFormatter.dateToFormat(donation.submitted_at),
-        donation.description,
-        donation.size,
-        donation.item_condition,
-        donation.gender,
-        donation.photo_url,
-      ]);
+  // filter option values
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(donations.map((d) => d.category))).sort(),
+    [donations]
+  );
 
-    setDataRows(parseDonations());
-  }, [donations]);
+  const conditionOptions = useMemo(
+    () => Array.from(new Set(donations.map((d) => d.item_condition))).sort(),
+    [donations]
+  );
 
-  // filter data rows on search value change or data row change
-  useEffect(() => {
-    const filterRows = () => {
-      const normalisedSearch = searchValue.trim().toLowerCase();
-      if (!normalisedSearch || normalisedSearch.length === 0)
-        return setRows(dataRows);
+  const sizeOptions = useMemo(
+    () => Array.from(new Set(donations.map((d) => d.size))).sort(),
+    [donations]
+  );
 
-      // filter by values of first 3 columns only to match table row layout
-      const filtered = dataRows.filter((row) =>
-        row
-          .slice(0, 3)
-          .some((cell) => String(cell).toLowerCase().includes(normalisedSearch))
+  const genderOptions = useMemo(
+    () => Array.from(new Set(donations.map((d) => d.gender))).sort(),
+    [donations]
+  );
+
+  const statusOptions = ["Pending", "Accepted", "Declined"];
+
+  // filter and search donations
+  const filteredRows = useMemo(() => {
+    return donations.filter((donation) => {
+      const searchNorm = searchValue.trim().toLowerCase();
+
+      const matchesSearch =
+        !searchNorm ||
+        donation.item_name.toLowerCase().includes(searchNorm) ||
+        donation.category.toLowerCase().includes(searchNorm);
+
+      const matchesCategory =
+        !filterCategory || donation.category === filterCategory;
+
+      const matchesCondition =
+        !filterCondition || donation.item_condition === filterCondition;
+
+      const matchesSize = !filterSize || donation.size === filterSize;
+
+      const matchesGender = !filterGender || donation.gender === filterGender;
+
+      const matchesStatus = !filterStatus || donation.status === filterStatus;
+
+      let matchesDate = true;
+      if (filterDateFrom)
+        matchesDate =
+          matchesDate &&
+          new Date(donation.submitted_at) >= new Date(filterDateFrom);
+
+      if (filterDateTo)
+        matchesDate =
+          matchesDate &&
+          new Date(donation.submitted_at) <= new Date(filterDateTo);
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesCondition &&
+        matchesSize &&
+        matchesGender &&
+        matchesStatus &&
+        matchesDate
       );
+    });
+  }, [
+    donations,
+    searchValue,
+    filterCategory,
+    filterCondition,
+    filterSize,
+    filterGender,
+    filterStatus,
+    filterDateFrom,
+    filterDateTo,
+  ]);
 
-      setRows(filtered);
-    };
+  // turn filtered donations into table rows
+  useEffect(() => {
+    const parsed = filteredRows.map((donation) => [
+      donation.item_name,
+      donation.category,
+      donation.status,
+      TimeFormatter.dateToFormat(donation.submitted_at),
+      donation.description,
+      donation.size,
+      donation.item_condition,
+      donation.gender,
+      donation.photo_urls?.[0] ?? "",
+    ]);
 
-    filterRows();
-  }, [searchValue, dataRows]);
+    setRows(parsed);
+  }, [filteredRows]);
+
+  const clearFilters = () => {
+    setSearchValue("");
+    setFilterCategory("");
+    setFilterCondition("");
+    setFilterSize("");
+    setFilterGender("");
+    setFilterStatus("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  };
 
   if (loading) return <Spinner />;
 
   return (
     <Box>
-      <VStack>
-        <Input
-          placeholder="Search..."
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          w={"full"}
-        />
-        {rows.length === 0 ? (
-          <Text>
-            {searchValue.trim().length > 0
-              ? "No results matching your search"
-              : "No donation history found."}
-          </Text>
-        ) : (
-          <Table variant={"simple"}>
-            <Thead position={"sticky"} bg={"white"} top={0} zIndex={1}>
-              <Tr>
-                {tableHeaders.slice(0, 3).map((header, i) => (
-                  <Th
-                    key={i}
-                    onClick={() => sortRows(header.replace(" ", "_"))}
-                    cursor="pointer"
-                    _hover={{ textDecoration: "underline" }}
-                  >
-                    <Tooltip
-                      label={`Sort by ${header}`}
-                      placement="top"
-                      hasArrow
-                    >
-                      {header}
-                    </Tooltip>
-                  </Th>
+      {/* MOBILE FILTER BUTTON */}
+      {isMobile && (
+        <Button
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+          w="full"
+          colorScheme="green"
+          borderRadius="0"
+        >
+          {showMobileFilters ? "Hide Filters" : "Show Filters"}
+        </Button>
+      )}
+
+      {/* FILTER BAR (COLLAPSIBLE ON MOBILE) */}
+      <Collapse in={!isMobile || showMobileFilters} animateOpacity>
+        <Box bg="white" p={4} borderRadius="lg" boxShadow="sm" mb={4}>
+          <HStack wrap="wrap" spacing={4} align="flex-end">
+            {/* Search */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Search
+              </Text>
+              <Input
+                placeholder="Search..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                width="180px"
+              />
+            </Box>
+
+            {/* Category */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Category
+              </Text>
+              <Select
+                placeholder="All"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                width="150px"
+              >
+                {categoryOptions.map((c) => (
+                  <option key={c}>{c}</option>
                 ))}
-              </Tr>
-            </Thead>
-            <Tbody>
-              {rows.map((row, i) => (
-                <React.Fragment key={i}>
-                  <Tr
-                    key={`${i}-main`}
-                    onClick={() => toggleIndex(i)}
-                    cursor="pointer"
-                    bg={expandedIndex === i ? "gray.200" : "white"}
-                    _hover={{ bg: "gray.100" }}
-                  >
-                    {row.slice(0, 3).map((cell, j) => (
-                      <Td
-                        key={j}
-                        position={expandedIndex === i ? "sticky" : "static"}
-                        top={expandedIndex === i ? 30 : "auto"}
-                        zIndex={expandedIndex === i ? 1 : "auto"}
-                        bg={"inherit"}
-                      >
-                        {cell}
-                      </Td>
-                    ))}
-                  </Tr>
-                  {expandedIndex === i && (
-                    <Tr key={`${i}-expanded`}>
-                      <Td colSpan={3} key={`${i}-expanded-cell`}>
-                        <VStack align="center" spacing={4}>
-                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                            {row.slice(4).map((cell, k) =>
-                              tableHeaders[k + 4].toLowerCase() !== "image" ? (
-                                <HStack key={k} align="center" spacing={2}>
-                                  <Text fontWeight="bold" minW={140}>
-                                    {tableHeaders[k + 4]}:
-                                  </Text>
-                                  <Text>{cell}</Text>
-                                </HStack>
-                              ) : (
-                                <Box key={k}>
-                                  <Image
-                                    src={cell}
-                                    alt={`${row[0]}`}
-                                    boxSize="240px"
-                                    objectFit="cover"
-                                    borderRadius="xl"
-                                    boxShadow="xl"
-                                  />
-                                </Box>
-                              )
-                            )}
-                          </SimpleGrid>
-                        </VStack>
-                      </Td>
-                    </Tr>
-                  )}
-                </React.Fragment>
+              </Select>
+            </Box>
+
+            {/* Condition */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Condition
+              </Text>
+              <Select
+                placeholder="All"
+                value={filterCondition}
+                onChange={(e) => setFilterCondition(e.target.value)}
+                width="150px"
+              >
+                {conditionOptions.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Size */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Size
+              </Text>
+              <Select
+                placeholder="All"
+                value={filterSize}
+                onChange={(e) => setFilterSize(e.target.value)}
+                width="120px"
+              >
+                {sizeOptions.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Gender */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Gender
+              </Text>
+              <Select
+                placeholder="All"
+                value={filterGender}
+                onChange={(e) => setFilterGender(e.target.value)}
+                width="120px"
+              >
+                {genderOptions.map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Status */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                Status
+              </Text>
+              <Select
+                placeholder="All"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                width="150px"
+              >
+                {statusOptions.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Date From */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                From
+              </Text>
+              <Input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                width="160px"
+              />
+            </Box>
+
+            {/* Date To */}
+            <Box>
+              <Text fontSize="xs" color="gray.600">
+                To
+              </Text>
+              <Input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                width="160px"
+              />
+            </Box>
+
+            <Button onClick={clearFilters} variant="outline" ml="auto">
+              Clear Filters
+            </Button>
+          </HStack>
+        </Box>
+      </Collapse>
+
+      {/* TABLE RESULTS */}
+      {rows.length === 0 ? (
+        <Text>No donation history found.</Text>
+      ) : (
+        <Table variant="simple">
+          <Thead bg="white" position="sticky" top={0} zIndex={2}>
+            <Tr>
+              {tableHeaders.slice(0, 3).map((header) => (
+                <Th key={header}>{header}</Th>
               ))}
-            </Tbody>
-          </Table>
-        )}
-      </VStack>
+            </Tr>
+          </Thead>
+
+          <Tbody>
+            {rows.map((row, i) => (
+              <React.Fragment key={i}>
+                <Tr
+                  onClick={() => toggleIndex(i)}
+                  cursor="pointer"
+                  bg={expandedIndex === i ? "gray.100" : "white"}
+                >
+                  {row.slice(0, 3).map((cell, j) => (
+                    <Td key={j}>{cell}</Td>
+                  ))}
+                </Tr>
+
+                {expandedIndex === i && (
+                  <Tr>
+                    <Td colSpan={3}>
+                      <VStack spacing={4} align="start">
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                          {/* Description */}
+                          <HStack>
+                            <Text fontWeight="bold">Description:</Text>
+                            <Text>{row[4]}</Text>
+                          </HStack>
+
+                          {/* Size */}
+                          <HStack>
+                            <Text fontWeight="bold">Size:</Text>
+                            <Text>{row[5]}</Text>
+                          </HStack>
+
+                          {/* Condition */}
+                          <HStack>
+                            <Text fontWeight="bold">Condition:</Text>
+                            <Text>{row[6]}</Text>
+                          </HStack>
+
+                          {/* Gender */}
+                          <HStack>
+                            <Text fontWeight="bold">Gender:</Text>
+                            <Text>{row[7]}</Text>
+                          </HStack>
+
+                          {/* Image */}
+                          <Box>
+                            <Image
+                              src={row[8]}
+                              boxSize="240px"
+                              borderRadius="lg"
+                              objectFit="cover"
+                            />
+                          </Box>
+                        </SimpleGrid>
+                      </VStack>
+                    </Td>
+                  </Tr>
+                )}
+              </React.Fragment>
+            ))}
+          </Tbody>
+        </Table>
+      )}
     </Box>
   );
-};
-
-export default DonationHistory;
+}
