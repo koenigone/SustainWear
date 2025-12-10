@@ -4,7 +4,7 @@ A Smart Clothing Donation & Sustainability Management Platform
 SustainWear is a full-stack web application designed to modernise and streamline clothing donations between donors, charity organisations, and administrators.
 The platform promotes sustainability by tracking environmental impact, simplifying donation workflows, and empowering organisations with actionable analytics.
 
-Built with React, Express.js, and SQLite, SustainWear provides a seamless experience for all user roles—Donor, Staff, and Admin—each equipped with tailored dashboards and tools.
+Built with React, Express.js, and SQLite, SustainWear provides a seamless experience for all user roles-Donor, Staff, and Admin-each equipped with tailored dashboards and tools.
 Features include real-time notifications, AI-powered item descriptions, sustainability metrics, admin reporting tools, and complete activity logs.
 
 
