@@ -1,4 +1,4 @@
-SustainWear
+<h1><strong>SustainWear</strong></h1>
 A Smart Clothing Donation & Sustainability Management Platform
 
 SustainWear is a full-stack web application designed to modernise and streamline clothing donations between donors, charity organisations, and administrators.
@@ -9,7 +9,7 @@ Features include real-time notifications, AI-powered item descriptions, sustaina
 
 
 
-Donor Dashboard
+<strong>Donor Dashboard</strong>
 <img width="2557" height="1323" alt="image" src="https://github.com/user-attachments/assets/19e4f17d-bdee-49a0-9fef-c10e015e6bc3" />
 
 <strong>Donation Form Supports AI Generated description:</strong>
@@ -54,7 +54,7 @@ AI-Powered Donation Form
 Donor Leaderboard
 <img src="https://github.com/user-attachments/assets/e4734b26-87f9-4cc6-88ec-349735efef99" width="100%" />
 
-🏢 Staff Features
+<strong>Staff Features</strong>
 
 Review and process incoming donations
 
@@ -64,7 +64,7 @@ View sustainability metrics for their organisation
 
 Access internal dashboards
 
-Staff Dashboard
+<strong>Staff Dashboard</strong>
 <img src="https://github.com/user-attachments/assets/c8e0ac31-b669-4d69-add1-d301cd1728a4" width="100%" />
 
 
@@ -88,8 +88,9 @@ Admin Action Logs
 <img src="https://github.com/user-attachments/assets/36ab80a6-cc0a-4a40-ba76-72be24c136a7" width="100%" />
 
 
-<strong>Tech Stach:</strong>
-Frontend
+<h1><strong>Tech Stach:</strong></h1>
+
+<strong>Frontend</strong>
 
 React.js
 
@@ -99,7 +100,7 @@ Axios
 
 Context API (Authentication & Notifications)
 
-Backend
+<strong>Back-end</strong>
 
 Node.js / Express.js
 
