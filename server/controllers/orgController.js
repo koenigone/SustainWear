@@ -565,7 +565,7 @@ const distributeInventoryItem = (req, res) => {
                 if (!err && donorRow) {
                   sendDonorNotification( // send in app notification
                     donorRow.donor_id,
-                    "Your donation was distributed",
+                    'Your donation was distributed',
                     `Your donated item "${item.item_name}" has been distributed to: ${beneficiary_group}`
                   );
                 }
