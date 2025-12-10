@@ -1,9 +1,7 @@
-const db = require("../config/db");
-const { sendDonorNotification } = require("../helpers/donorNotifications");
-const { sendEmail } = require("../helpers/mailer");
-const {
-  calculateSustainabilityImpact,
-} = require("../helpers/sustainabilityMetrics");
+const db = require('../config/db');
+const { sendDonorNotification } = require('../helpers/donorNotifications');
+const { sendEmail } = require('../helpers/mailer');
+const { calculateSustainabilityImpact } = require('../helpers/sustainabilityMetrics');
 
 // GET STAFF'S ORGANISATION INFO
 const getStaffOrganisation = (user_id, callback) => {
@@ -14,6 +12,34 @@ const getStaffOrganisation = (user_id, callback) => {
     WHERE OS.user_id = ? AND OS.is_active = 1
   `;
   db.get(staffOrgQuery, [user_id], callback);
+};
+
+// Get all staff of an organisation including inactives
+const getOrganisationsStaff = (req, res) => {
+  const { org_id } = req.params;
+
+  if (!org_id) return res.status(400).json({ errMessage: 'Organisation ID is required' });
+
+  const query = `SELECT 
+      OS.user_id as staff_id,
+      CONCAT(U.first_name, ' ', U.last_name) AS staff_name,
+      OS.staff_role,
+      OS.is_active,
+      OS.assigned_at,
+      OS.removed_at
+    FROM ORGANISATION_STAFF OS 
+    JOIN USER U ON OS.user_id = U.user_id
+    WHERE OS.org_id = ?;`;
+
+  db.all(query, [org_id], (err, rows) => {
+    if (err)
+      return res.status(500).json({
+        errMessage: 'Failed to fetch distribution records',
+        error: err.message,
+      });
+
+    return res.status(200).json(rows);
+  });
 };
 
 // GET ALL ACTIVE ORGANISATIONS
@@ -32,7 +58,7 @@ const getActiveOrganisations = (req, res) => {
   db.all(activeOrgsQuery, [], (err, rows) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Database error while retrieving organisations",
+        errMessage: 'Database error while retrieving organisations',
         error: err.message,
       });
     }
@@ -65,7 +91,7 @@ const getAllDonationRequests = (req, res) => {
   db.all(donationRequestsQuery, [org_id], (err, rows) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Database error while retrieving donation requests",
+        errMessage: 'Database error while retrieving donation requests',
         error: err.message,
       });
     }
@@ -99,22 +125,23 @@ const updateDonationRequestStatus = async (req, res) => {
   const { status, handled_by_staff_id, reason } = req.body;
 
   // only two allowed statuses now
-  const allowedStatuses = ["Accepted", "Declined"];
+  const allowedStatuses = ['Accepted', 'Declined'];
   if (!allowedStatuses.includes(status)) {
-    return res.status(400).json({ errMessage: "Invalid donation status" });
+    return res.status(400).json({ errMessage: 'Invalid donation status' });
   }
 
   if (!handled_by_staff_id) {
-    return res.status(400).json({ errMessage: "Missing staff handler ID" });
+    return res.status(400).json({ errMessage: 'Missing staff handler ID' });
   }
 
-  if (status === "Declined" && !reason) {
+  if (status === 'Declined' && !reason) {
     return res.status(400).json({
-      errMessage: "A reason is required when declining a donation",
+      errMessage: 'A reason is required when declining a donation',
     });
   }
 
-  try { // validate staff
+  try {
+    // validate staff
     const staffRow = await new Promise((resolve, reject) => {
       db.get(
         `
@@ -130,7 +157,7 @@ const updateDonationRequestStatus = async (req, res) => {
     });
 
     if (!staffRow) {
-      return res.status(400).json({ errMessage: "Invalid staff ID" });
+      return res.status(400).json({ errMessage: 'Invalid staff ID' });
     }
 
     // update donation status
@@ -153,9 +180,7 @@ const updateDonationRequestStatus = async (req, res) => {
     });
 
     if (donationUpdated === 0) {
-      return res
-        .status(404)
-        .json({ errMessage: "Donation transaction not found" });
+      return res.status(404).json({ errMessage: 'Donation transaction not found' });
     }
 
     // fetch donation + donor email
@@ -174,12 +199,12 @@ const updateDonationRequestStatus = async (req, res) => {
 
     if (!donation) {
       return res.status(500).json({
-        errMessage: "Donation updated but donor lookup failed",
+        errMessage: 'Donation updated but donor lookup failed',
       });
     }
 
     // if Accepted -> Insert into Inventory
-    if (status === "Accepted") {
+    if (status === 'Accepted') {
       await new Promise((resolve, reject) => {
         db.run(
           `
@@ -205,7 +230,7 @@ const updateDonationRequestStatus = async (req, res) => {
 
     // build donor notification message
     const message =
-      status === "Accepted"
+      status === 'Accepted'
         ? `Your donation (ID: ${transaction_id}) has been accepted and added to the charity inventory.`
         : `Your donation (ID: ${transaction_id}) has been declined. Reason: ${reason}.`;
 
@@ -213,24 +238,19 @@ const updateDonationRequestStatus = async (req, res) => {
     try {
       await sendEmail(donation.email, `Donation Request ${status}`, message);
     } catch (e) {
-      console.error("Email send failed:", e);
+      console.error('Email send failed:', e);
     }
 
     // send in-app notification
-    sendDonorNotification(
-      donation.donor_id,
-      `Donation Request ${status}`,
-      message,
-      transaction_id
-    );
+    sendDonorNotification(donation.donor_id, `Donation Request ${status}`, message, transaction_id);
 
     return res.status(200).json({
       message: `Donation request ${status} successfully`,
     });
   } catch (err) {
-    console.error("Error updating request:", err);
+    console.error('Error updating request:', err);
     return res.status(500).json({
-      errMessage: "Internal server error",
+      errMessage: 'Internal server error',
       error: err.message,
     });
   }
@@ -263,7 +283,7 @@ const getInventoryItems = (req, res) => {
   db.all(query, [org_id], (err, rows) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Failed to fetch inventory items",
+        errMessage: 'Failed to fetch inventory items',
         error: err.message,
       });
     }
@@ -306,13 +326,13 @@ const getInventoryItemById = (req, res) => {
   db.get(getInventoryItems, [inv_id, org_id], (err, row) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Failed to fetch inventory item",
+        errMessage: 'Failed to fetch inventory item',
         error: err.message,
       });
     }
 
     if (!row) {
-      return res.status(404).json({ errMessage: "Inventory item not found" });
+      return res.status(404).json({ errMessage: 'Inventory item not found' });
     }
 
     return res.status(200).json(row);
@@ -331,19 +351,19 @@ const removeInventoryItem = (req, res) => {
   db.run(removeInventoryItem, [inv_id, org_id], function (err) {
     if (err) {
       return res.status(500).json({
-        errMessage: "Failed to remove inventory item",
+        errMessage: 'Failed to remove inventory item',
         error: err.message,
       });
     }
 
     if (this.changes === 0) {
       return res.status(404).json({
-        errMessage: "Inventory item not found",
+        errMessage: 'Inventory item not found',
       });
     }
 
     return res.status(200).json({
-      message: "Inventory item removed successfully",
+      message: 'Inventory item removed successfully',
     });
   });
 };
@@ -356,7 +376,7 @@ const distributeInventoryItem = (req, res) => {
 
   if (!beneficiary_group || beneficiary_group.trim().length === 0) {
     return res.status(400).json({
-      errMessage: "Beneficiary group is required",
+      errMessage: 'Beneficiary group is required',
     });
   }
 
@@ -370,13 +390,13 @@ const distributeInventoryItem = (req, res) => {
   db.get(staffCheckQuery, [staff_id, org_id], (err, staffRow) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Database error during staff validation",
+        errMessage: 'Database error during staff validation',
         error: err.message,
       });
     }
     if (!staffRow) {
       return res.status(403).json({
-        errMessage: "Not authorised to distribute items for this organisation",
+        errMessage: 'Not authorised to distribute items for this organisation',
       });
     }
 
@@ -390,13 +410,13 @@ const distributeInventoryItem = (req, res) => {
     db.get(inventoryQuery, [inv_id, org_id], (err, item) => {
       if (err) {
         return res.status(500).json({
-          errMessage: "Database error during inventory lookup",
+          errMessage: 'Database error during inventory lookup',
           error: err.message,
         });
       }
       if (!item) {
         return res.status(404).json({
-          errMessage: "Inventory item not found",
+          errMessage: 'Inventory item not found',
         });
       }
 
@@ -413,7 +433,7 @@ const distributeInventoryItem = (req, res) => {
       db.run(deactivateInventoryQuery, [inv_id], function (err) {
         if (err) {
           return res.status(500).json({
-            errMessage: "Failed to update inventory item",
+            errMessage: 'Failed to update inventory item',
             error: err.message,
           });
         }
@@ -441,8 +461,7 @@ const distributeInventoryItem = (req, res) => {
           function (err) {
             if (err) {
               return res.status(500).json({
-                errMessage:
-                  "Distribution succeeded but failed to create distribution record",
+                errMessage: 'Distribution succeeded but failed to create distribution record',
                 error: err.message,
               });
             }
@@ -461,7 +480,7 @@ const distributeInventoryItem = (req, res) => {
                 if (!err && donorRow) {
                   sendDonorNotification(
                     donorRow.donor_id,
-                    "Your donation was distributed",
+                    'Your donation was distributed',
                     `Your donated item "${item.item_name}" has been distributed to: ${beneficiary_group}`
                   );
                 }
@@ -469,7 +488,7 @@ const distributeInventoryItem = (req, res) => {
             }
 
             return res.status(200).json({
-              message: "Item distributed successfully",
+              message: 'Item distributed successfully',
               distribution_id,
             });
           }
@@ -483,7 +502,7 @@ const getDistributionRecords = (req, res) => {
   const { org_id } = req.params;
 
   if (!org_id) {
-    return res.status(400).json({ errMessage: "Organisation ID is required" });
+    return res.status(400).json({ errMessage: 'Organisation ID is required' });
   }
 
   const query = `
@@ -498,7 +517,8 @@ const getDistributionRecords = (req, res) => {
     item_name, 
     category, 
     size, 
-    item_condition
+    item_condition,
+    DR.handled_by_staff_id
   FROM DISTRIBUTION_RECORD DR 
   JOIN USER U ON DR.handled_by_staff_id = U.user_id
   JOIN DONATION_TRANSACTION DT on DR.transaction_id = DT.transaction_id
@@ -507,7 +527,7 @@ const getDistributionRecords = (req, res) => {
   db.all(query, [org_id], (err, rows) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Failed to fetch distribution records",
+        errMessage: 'Failed to fetch distribution records',
         error: err.message,
       });
     }
@@ -641,4 +661,5 @@ module.exports = {
   getOrgCategoryBreakdown,
   getOrgDistributionMonthly,
   getOrgEnvironmentalMonthly,
+  getOrganisationsStaff,
 };
