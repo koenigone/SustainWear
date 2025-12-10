@@ -13,8 +13,8 @@ export default function DoughnutChartStatus({ data, loading }) {
       {empty ? (
         <ChartEmpty message="No donation activity yet." />
       ) : (
-        <Box w="100%" minH="260px" h="100%">
-          <ResponsiveContainer width="100%" height="100%">
+        <Box w="100%" minH="260px">
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie
                 data={data}

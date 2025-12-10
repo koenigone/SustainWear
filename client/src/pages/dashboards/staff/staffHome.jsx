@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Box, SimpleGrid, Flex, Spinner, Text } from "@chakra-ui/react";
+import {
+  Box,
+  SimpleGrid,
+  Flex,
+  Spinner,
+  Text,
+} from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 
@@ -7,6 +13,8 @@ import OrgStatusChart from "../../../components/charts/staff/orgStatusChart";
 import OrgCategoryChart from "../../../components/charts/staff/orgCategoryChart";
 import OrgDistributionChart from "../../../components/charts/staff/orgDistributionChart";
 import OrgEnvironmentChart from "../../../components/charts/staff/orgEnvironmentChart";
+import OrgNeededCategoriesChart from "../../../components/charts/staff/orgTopNeededChart";
+import OrgPerformanceMetrics from "../../../components/charts/staff/orgPerformance";
 
 export default function OrgHome() {
   const { organisation } = useAuth();
@@ -15,6 +23,8 @@ export default function OrgHome() {
   const [categoryData, setCategoryData] = useState([]);
   const [distributionData, setDistributionData] = useState([]);
   const [environmentData, setEnvironmentData] = useState([]);
+  const [neededCategories, setNeededCategories] = useState([]);
+  const [performance, setPerformance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,19 +39,24 @@ export default function OrgHome() {
     try {
       const orgId = organisation.org_id || organisation.id;
 
-      const [sum, status, category, dist, env] = await Promise.all([
-        api.get(`/orgs/${orgId}/dashboard/summary`),
-        api.get(`/orgs/${orgId}/dashboard/status`),
-        api.get(`/orgs/${orgId}/dashboard/categories`),
-        api.get(`/orgs/${orgId}/dashboard/distribution-monthly`),
-        api.get(`/orgs/${orgId}/dashboard/environment-monthly`),
-      ]);
+      const [sum, status, category, dist, env, needed, perfRes] =
+        await Promise.all([
+          api.get(`/orgs/${orgId}/dashboard/summary`),
+          api.get(`/orgs/${orgId}/dashboard/status`),
+          api.get(`/orgs/${orgId}/dashboard/categories`),
+          api.get(`/orgs/${orgId}/dashboard/distribution-monthly`),
+          api.get(`/orgs/${orgId}/dashboard/environment-monthly`),
+          api.get(`/orgs/${orgId}/dashboard/needed-categories`),
+          api.get(`/orgs/${orgId}/performance-metrics`),
+        ]);
 
       setSummary(sum.data);
       setStatusData(status.data);
       setCategoryData(category.data);
       setDistributionData(dist.data);
       setEnvironmentData(env.data);
+      setNeededCategories(needed.data);
+      setPerformance(perfRes.data);
     } catch (err) {
       console.error("Org dashboard error:", err);
     } finally {
@@ -80,17 +95,24 @@ export default function OrgHome() {
         <StatCard label="People Helped" value={summary.beneficiaries_served} />
       </SimpleGrid>
 
-      {/* CHARTS */}
+      {/* MAIN CHARTS */}
       <SimpleGrid columns={[1, 2]} spacing={8} minChildWidth="350px">
         <OrgStatusChart data={statusData} loading={loading} />
         <OrgCategoryChart data={categoryData} loading={loading} />
         <OrgDistributionChart data={distributionData} loading={loading} />
         <OrgEnvironmentChart data={environmentData} loading={loading} />
       </SimpleGrid>
+
+      {/* BOTTOM PANELS */}
+      <SimpleGrid columns={{ base: 1, md: 1, lg: 2 }} spacing={8} mt={10}>
+        <OrgNeededCategoriesChart data={neededCategories} />
+        <OrgPerformanceMetrics metrics={performance} />
+      </SimpleGrid>
     </Box>
   );
 }
 
+// stat card Component
 function StatCard({ label, value }) {
   return (
     <Box

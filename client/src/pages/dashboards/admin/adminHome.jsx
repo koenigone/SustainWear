@@ -6,6 +6,8 @@ import AdminStatusChart from "../../../components/charts/admin/adminStatusChart"
 import AdminActivityChart from "../../../components/charts/admin/adminActivityChart";
 import AdminOrgPerformanceChart from "../../../components/charts/admin/adminOrgPerformanceChart";
 import AdminEnvironmentChart from "../../../components/charts/admin/adminEnvironmentChart";
+import UserGrowthChart from "../../../components/charts/admin/adminUserGrowthChart";
+import DonationFunnelChart from "../../../components/charts/admin/adminDonationFunnelChart";
 
 export default function AdminHome() {
   const [summary, setSummary] = useState(null);
@@ -13,6 +15,8 @@ export default function AdminHome() {
   const [activityData, setActivityData] = useState([]);
   const [orgPerformance, setOrgPerformance] = useState([]);
   const [environmentData, setEnvironmentData] = useState([]);
+  const [userGrowth, setUserGrowth] = useState([]);
+  const [funnelData, setFunnelData] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -22,12 +26,22 @@ export default function AdminHome() {
 
   const loadAll = async () => {
     try {
-      const [sum, status, activity, performance, env] = await Promise.all([
+      const [
+        sum,
+        status,
+        activity,
+        performance,
+        env,
+        userGrowthRes,
+        funnelRes,
+      ] = await Promise.all([
         api.get("/admin/dashboard/summary"),
         api.get("/admin/dashboard/status-breakdown"),
         api.get("/admin/dashboard/monthly-activity"),
         api.get("/admin/dashboard/org-performance"),
         api.get("/admin/dashboard/environment-monthly"),
+        api.get("/admin/metrics/user-growth"),
+        api.get("/admin/metrics/donation-funnel"),
       ]);
 
       setSummary(sum.data);
@@ -36,6 +50,8 @@ export default function AdminHome() {
       setOrgPerformance(performance.data);
       setEnvironmentData(env.data);
 
+      setUserGrowth(userGrowthRes.data);
+      setFunnelData(funnelRes.data);
     } catch (err) {
       console.error("Admin dashboard error:", err);
     } finally {
@@ -69,15 +85,17 @@ export default function AdminHome() {
       </SimpleGrid>
 
       {/* CHARTS */}
-      <SimpleGrid
-        columns={[1, 2]}
-        spacing={8}
-        minChildWidth="350px"
-      >
+      <SimpleGrid columns={[1, 2]} spacing={8} minChildWidth="350px">
         <AdminStatusChart data={statusData} loading={loading} />
         <AdminOrgPerformanceChart data={orgPerformance} loading={loading} />
         <AdminActivityChart data={activityData} loading={loading} />
         <AdminEnvironmentChart data={environmentData} loading={loading} />
+      </SimpleGrid>
+
+      {/* BOTTOM ANALYTICS */}
+      <SimpleGrid columns={[1, 2]} spacing={8} mt={10} minChildWidth="350px">
+        <UserGrowthChart data={userGrowth} loading={loading} />
+        <DonationFunnelChart data={funnelData} loading={loading} />
       </SimpleGrid>
     </Box>
   );

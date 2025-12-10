@@ -1,6 +1,7 @@
 import { Box, Text, Icon } from "@chakra-ui/react";
 import { FiBarChart2 } from "react-icons/fi";
 
+// used when there is no data to show in a chart
 export default function ChartEmpty({ message = "No data available yet." }) {
   return (
     <Box

@@ -12,6 +12,8 @@ export default function ChartCard({ title, loading, children }) {
       height="100%"
       display="flex"
       flexDirection="column"
+      flex="1"
+      minHeight="320px"
     >
       <Heading size="md" mb={4} color="brand.green">
         {title}
@@ -22,7 +24,9 @@ export default function ChartCard({ title, loading, children }) {
           <Spinner size="xl" color="brand.green" />
         </Box>
       ) : (
-        children
+        <Box flex="1" overflow="hidden">
+          {children}
+        </Box>
       )}
     </Box>
   );

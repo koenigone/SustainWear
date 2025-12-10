@@ -3,24 +3,36 @@ const { sendDonorNotification } = require("../helpers/donorNotifications");
 const { sendEmail } = require("../helpers/mailer");
 const generateItemDescription = require("../services/aiDescriptionService");
 
+const { 
+  GENERAL_ERROR_CODES,
+  GENERAL_ERROR_MESSAGES,
+  DONOR_ERROR_CODES,
+  DONOR_ERROR_MESSAGES,
+  DONOR_SUCCESS_CODES,
+  DONOR_SUCCESS_MESSAGES,
+ } = require("../messages/errorMessages");
+
+// -----------------------------
+// DONOR DONATION LOGIC
+// -----------------------------
+
 // SUBMIT DONATION REQUEST
 const submitDonationRequest = (req, res) => {
-  const donor_id = req.user?.id;
-  const {
-    org_id,
-    item_name,
-    description,
-    category,
-    item_condition,
-    size,
-    gender,
-  } = req.body;
+  const user_id = req.user.id;
+  const { org_id, item_name, description, category, item_condition, size, gender } = req.body;
 
-  if (!req.file) {
-    return res.status(400).json({ errMessage: "Image upload is required." });
+  // validate amount of photos
+  if (!req.files || req.files.length === 0) {
+    return res
+      .status(400)
+      .json({ 
+        code: DONOR_ERROR_CODES.REQUIRE_AT_LEAST_ONE_IMAGE,
+        message: DONOR_ERROR_MESSAGES.DONOR_REQUIRE_AT_LEAST_ONE_IMAGE
+      });
   }
 
-  const photo_url = `/uploads/donations/${req.file.filename}`;
+  // build array of uploaded image URLs, up to 4 photos
+  const photo_urls = req.files.map((f) => `/uploads/donations/${f.filename}`);
 
   if (
     !item_name ||
@@ -30,72 +42,54 @@ const submitDonationRequest = (req, res) => {
     !size ||
     !gender
   ) {
-    return res.status(400).json({ errMessage: "All fields are required." });
+    return res.status(400).json({
+      code: GENERAL_ERROR_CODES.ALL_FIELDS_REQUIRED,
+      message: GENERAL_ERROR_MESSAGES.ALL_FIELDS_REQUIRED
+    });
   }
 
-  if (!org_id) {
-    return res.status(400).json({ errMessage: "Organisation ID is required." });
-  }
-
-  // insert donation request into DB
   const insertQuery = `
     INSERT INTO DONATION_TRANSACTION 
-    (donor_id, org_id, item_name, description, category, item_condition, size, gender, photo_url)
+    (donor_id, org_id, item_name, description, category, item_condition, size, gender, photo_urls)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.run(
-    insertQuery,
-    [
-      donor_id,
-      org_id,
-      item_name,
-      description,
-      category,
-      item_condition,
-      size,
-      gender,
-      photo_url,
+  db.run(insertQuery, [ user_id, org_id, item_name, description, category, item_condition, size, gender,
+      JSON.stringify(photo_urls), // storing JSON array
     ],
-    (err) => {
+    function (err) {
       if (err) {
         return res.status(500).json({
-          errMessage: "Database error",
-          error: err.message,
+          code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+          message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+          error: err.message
         });
       }
 
       const request_id = this.lastID;
+      const orgNameQuery = "SELECT name FROM ORGANISATION WHERE org_id = ?";
 
-      // get org info and donor info for notification and email
-      db.get(
-        "SELECT name FROM ORGANISATION WHERE org_id = ?",
-        [org_id],
-        (orgErr, org) => {
+      db.get(orgNameQuery, [org_id], (orgErr, org) => {
           if (!orgErr && org) {
             sendDonorNotification(
-              // create in app notification
-              donor_id,
+              user_id,
               "Donation Submitted",
-              `Your donation request has been sent to ${org.name} and is awaiting review.`,
+              `Your donation to ${org.name} has been submitted and is awaiting review.`,
               request_id
             );
 
-            db.get(
-              "SELECT email, first_name FROM USER WHERE user_id = ?",
-              [donor_id],
-              (userErr, user) => {
+            const userNameAndEmailQuery = "SELECT email, first_name FROM USER WHERE user_id = ?";
+            db.get(userNameAndEmailQuery, [user_id], (userErr, user) => {
                 if (!userErr && user) {
                   const subject = `Donation Submitted to ${org.name}`;
                   const message = `
-                  Hi ${user.first_name},<br/><br/>
-                  Your donation <b>${item_name}</b> has been successfully submitted to 
-                  <b>${org.name}</b>.<br/>
-                  It is now awaiting review.<br/><br/>
-                  Thank you for supporting SustainWear! 💚
-                `;
-
-                  sendEmail(user.email, subject, message); // send confirmation email
+                    Hi ${user.first_name},<br/><br/>
+                    Your donation <b>${item_name}</b> has been submitted to 
+                    <b>${org.name}</b>.<br/>
+                    It is now awaiting review.<br/><br/>
+                    Thank you for supporting SustainWear! 💚
+                  `;
+                  sendEmail(user.email, subject, message);
                 }
               }
             );
@@ -103,23 +97,86 @@ const submitDonationRequest = (req, res) => {
         }
       );
 
-      // respond with success
       res.status(201).json({
-        message: "Donation request submitted successfully",
+        code: DONOR_SUCCESS_CODES.DONATION_REQUEST_SUCCESS,
+        message: DONOR_SUCCESS_MESSAGES.DONOR_DONATION_REQUEST_SUCCESS,
         request_id,
-        photo_url,
+        photo_urls
       });
     }
   );
 };
 
+// GET DONOR DONATION HISTORY
+const getDonationHistory = (req, res) => {
+  const user_id = req.user?.id;
+
+  const isURL = (value) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const donationHistoryQuery = `
+    SELECT 
+      item_name,
+      category,
+      size,
+      gender,
+      item_condition,
+      photo_urls,
+      status,
+      submitted_at,
+      description
+    FROM DONATION_TRANSACTION
+    WHERE donor_id = ? AND status <> 'Rejected'
+    ORDER BY submitted_at DESC
+  `;
+
+  db.all(donationHistoryQuery, [user_id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        code: DONOR_ERROR_CODES.FAILED_TO_LOAD_HISTORY,
+        message: DONOR_ERROR_MESSAGES.DONOR_FAILED_TO_LOAD_HISTORY,
+        error: err.message
+      });
+    }
+
+    const modifiedRows = rows.map((row) => {
+      let photos = [];
+
+      try {
+        photos = JSON.parse(row.photo_urls || "[]");
+      } catch {
+        photos = [];
+      }
+
+      const fullUrls = photos.map((url) =>
+        isURL(url) ? url : `${process.env.BACKEND_URL}${url}`
+      );
+
+      return {
+        ...row,
+        photo_urls: fullUrls,
+      };
+    });
+
+    return res.status(200).json(modifiedRows);
+  });
+};
+
+// -----------------------------
+// DONOR NOTIFICATIONS
+// -----------------------------
+
 // GET ALL NOTIFICATIONS FOR LOGGED IN USER
 const getDonorNotifications = (req, res) => {
   const user_id = req.user?.id;
-  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const query = `
-    SELECT 
+  const donorNotificationsQuery = `SELECT 
       notification_id,
       title,
       message,
@@ -131,11 +188,12 @@ const getDonorNotifications = (req, res) => {
     ORDER BY created_at DESC
   `;
 
-  db.all(query, [user_id], (err, rows) => {
+  db.all(donorNotificationsQuery, [user_id], (err, rows) => {
     if (err) {
       return res.status(500).json({
-        errMessage: "Failed to load notifications",
-        error: err.message,
+        code: DONOR_ERROR_CODES.FAILED_TO_LOAD_NOTIFICATIONS,
+        message: DONOR_ERROR_MESSAGES.DONOR_FAILED_TO_LOAD_NOTIFICATIONS,
+        error: err.message
       });
     }
 
@@ -146,108 +204,51 @@ const getDonorNotifications = (req, res) => {
 // MARK ONE NOTIFICATION AS READ
 const markNotificationRead = (req, res) => {
   const { notification_id } = req.params;
-
   const user_id = req.user?.id;
-  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const query = `
-    UPDATE NOTIFICATION
-    SET is_read = 1
-    WHERE notification_id = ? AND user_id = ?
-  `;
-  db.run(query, [notification_id, user_id], (err) => {
+  const markReadQuery = "UPDATE NOTIFICATION SET is_read = 1 WHERE notification_id = ? AND user_id = ?";
+  db.run(markReadQuery, [notification_id, user_id], (err) => {
     if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
+      return res.status(500).json({
+          code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+          message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+          error: err.message
+        });
 
-    res.json({ message: "Notification marked as read" });
+    res.json({
+      code: DONOR_SUCCESS_CODES.NOTIFICATION_MARKED_READ,
+      message: DONOR_SUCCESS_MESSAGES.DONOR_NOTIFICATION_MARKED_READ
+    });
   });
 };
 
 // MARK ALL AS READ
 const markAllRead = (req, res) => {
   const user_id = req.user?.id;
-  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
 
-  const query = `
-    UPDATE NOTIFICATION
-    SET is_read = 1
-    WHERE user_id = ?
-  `;
-
-  db.run(query, [user_id], (err) => {
+  const markAllReadQuery = "UPDATE NOTIFICATION SET is_read = 1 WHERE user_id = ?";
+  db.run(markAllReadQuery, [user_id], (err) => {
     if (err)
-      return res
-        .status(500)
-        .json({ errMessage: "Database error", error: err.message });
-
-    res.json({ message: "All notifications marked as read" });
-  });
-};
-
-// Get donors donation history
-const getDonationHistory = (req, res) => {
-  const user_id = req.user?.id;
-
-  // used to check if photo_url is already a full URL
-  const isURL = (value) => {
-    try {
-      new URL(value);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  if (!user_id) return res.status(401).json({ errMessage: "Unauthorized" });
-
-  // switch table from requests to transactions on pull
-  const query = `
-    SELECT 
-      item_name,
-      category,
-      size,
-      gender,
-      item_condition,
-      photo_url,
-      status,
-      submitted_at,
-      description
-    FROM DONATION_TRANSACTION
-    WHERE donor_id = ? AND status <> 'Rejected'
-    ORDER BY submitted_at DESC`;
-
-  db.all(query, [user_id], (err, rows) => {
-    if (err) {
       return res.status(500).json({
-        errMessage: "Failed to load donation history",
-        error: err.message,
+       code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+       message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+       error: err.message
       });
-    }
 
-    // modify photo_url to be full URL if not already
-    const modifiedRows = rows.map((row) => {
-      if (row.photo_url && !isURL(row.photo_url)) {
-        return {
-          ...row,
-          photo_url: `${process.env.BACKEND_URL}${row.photo_url}`,
-        };
-      } else {
-        return row;
-      }
+    res.json({
+      code: DONOR_SUCCESS_CODES.NOTIFICATIONS_MARKED_ALL,
+      message: DONOR_SUCCESS_MESSAGES.DONOR_NOTIFICATIONS_MARKED_ALL
     });
-
-    return res.status(200).json(modifiedRows);
   });
 };
 
-// GENERATE DONATION DESCRIPTION USING AI
+// -----------------------------
+// GENERATE AI DESCRIPTION
+// -----------------------------
 const generateDonationDescription = async (req, res) => {
   try {
     const { item_name, category, item_condition, size, gender } = req.body;
 
-    // call AI service and pass parameters from request body
     const description = await generateItemDescription({
       item_name,
       category,
@@ -259,19 +260,20 @@ const generateDonationDescription = async (req, res) => {
     res.status(200).json({ description });
   } catch (err) {
     res.status(500).json({
-      errMessage: "Failed to generate description",
-      debug: err?.message || err,
+      code: DONOR_ERROR_CODES.FAILED_TO_GENERATE_DESCRIPTION,
+      message: DONOR_ERROR_MESSAGES.DONOR_FAILED_TO_GENERATE_DESCRIPTION,
+      error: err.message
     });
   }
 };
 
+// -----------------------------
 // DONOR METRICS
-
-// SUMMARY CARDS (total donations, co2 saved, landfill, beneficiaries)
+// -----------------------------
 const getDonorSummary = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
+  const getSummaryQuery = `
     SELECT 
       COUNT(*) AS total_donations,
       IFNULL((
@@ -296,51 +298,61 @@ const getDonorSummary = (req, res) => {
     WHERE donor_id = ?;
   `;
 
-  db.get(query, [donor_id, donor_id, donor_id, donor_id], (err, row) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.get(getSummaryQuery, [donor_id, donor_id, donor_id, donor_id], (err, row) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
+
     res.json(row);
   });
 };
 
-// STATUS BREAKDOWN
 const getDonationStatusBreakdown = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
+  const statusBreakdownQuery = `
     SELECT status, COUNT(*) AS count
     FROM DONATION_TRANSACTION
     WHERE donor_id = ?
     GROUP BY status;
   `;
 
-  db.all(query, [donor_id], (err, rows) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.all(statusBreakdownQuery, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
     res.json(rows);
   });
 };
 
-// CATECORY BREAKDOWN
 const getDonationCategoryBreakdown = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
+  const categoryBreakdownQuery = `
     SELECT category, COUNT(*) AS count
     FROM DONATION_TRANSACTION
     WHERE donor_id = ?
     GROUP BY category;
   `;
 
-  db.all(query, [donor_id], (err, rows) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.all(categoryBreakdownQuery, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
     res.json(rows);
   });
 };
 
-// MONTHLY CO2 SAVED (value to donor)
 const getMonthlyImpact = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
+  const monthlyImpactQuery = `
     SELECT 
       strftime('%Y-%m', dr.distributed_at) AS month,
       SUM(dr.co2_saved) AS total_co2,
@@ -353,18 +365,20 @@ const getMonthlyImpact = (req, res) => {
     ORDER BY month;
   `;
 
-  db.all(query, [donor_id], (err, rows) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.all(monthlyImpactQuery, [donor_id], (err, rows) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
     res.json(rows);
   });
 };
 
-// RECENT ACTIVITY FEED
 const getRecentActivity = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
-    -- Donation submissions + decisions
+  const recentActivityQuery = `
     SELECT
       dt.transaction_id AS id,
       dt.item_name,
@@ -380,7 +394,6 @@ const getRecentActivity = (req, res) => {
 
     UNION ALL
 
-    -- Distribution events
     SELECT
       dr.transaction_id AS id,
       (SELECT item_name FROM DONATION_TRANSACTION WHERE transaction_id = dr.transaction_id),
@@ -399,40 +412,42 @@ const getRecentActivity = (req, res) => {
     LIMIT 5
   `;
 
-  db.all(query, [donor_id, donor_id], (err, rows) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.all(recentActivityQuery, [donor_id, donor_id], (err, rows) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
     res.json(rows);
   });
 };
 
-// DONORS LEADERBOARD
 const getDonorLeaderboard = (req, res) => {
   const donor_id = req.user.id;
 
-  const query = `
+  const donorsLeaderboardQuery = `
     SELECT
       u.user_id,
       u.first_name || ' ' || u.last_name AS name,
-
-      -- COUNT OF ACCEPTED DONATIONS
       (
         SELECT COUNT(*)
         FROM DONATION_TRANSACTION dt
         WHERE dt.donor_id = u.user_id
         AND dt.status = 'Accepted'
       ) AS accepted_count
-
     FROM USER u
     WHERE u.role = 'Donor'
-
     ORDER BY accepted_count DESC
     LIMIT 7;
   `;
 
-  db.all(query, [], (err, rows) => {
-    if (err) return res.status(500).json({ err: err.message });
+  db.all(donorsLeaderboardQuery, [], (err, rows) => {
+    if (err) return res.status(500).json({
+      code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+      message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+      error: err.message
+    });
 
-    // compute current donor rank (among ALL donors)
     const rankQuery = `
       SELECT
         u.user_id,
@@ -448,10 +463,13 @@ const getDonorLeaderboard = (req, res) => {
     `;
 
     db.all(rankQuery, [], (err2, allRows) => {
-      if (err2) return res.status(500).json({ err: err2.message });
+      if (err2) return res.status(500).json({
+        code: GENERAL_ERROR_CODES.DATABASE_ERROR,
+        message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
+        error: err2.message
+      });
 
-      const rank =
-        allRows.findIndex((r) => r.user_id === donor_id) + 1;
+      const rank = allRows.findIndex((r) => r.user_id === donor_id) + 1;
 
       const currentUser = rows.find((r) => r.user_id === donor_id) || {
         user_id: donor_id,

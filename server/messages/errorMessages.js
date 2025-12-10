@@ -1,0 +1,360 @@
+// ============================================================================
+// GENERAL
+// ============================================================================
+
+const GENERAL_ERROR_CODES = {
+  UNAUTHORIZED: "GENERAL_UNAUTHORIZED",
+  DATABASE_ERROR: "GENERAL_DATABASE_ERROR",
+  ALL_FIELDS_REQUIRED: "GENERAL_ALL_FIELDS_REQUIRED",
+};
+
+const GENERAL_ERROR_MESSAGES = {
+  UNAUTHORIZED: "You must be logged in to access this resource.",
+  DATABASE_ERROR: "A database error occurred.",
+  ALL_FIELDS_REQUIRED: "All required fields must be filled.",
+};
+
+// ============================================================================
+// USER (Register, login, profile, password, 2FA)
+// ============================================================================
+
+const USER_ERROR_CODES = {
+  ALL_FIELDS_REQUIRED: "USER_ALL_FIELDS_REQUIRED",
+  FIRST_NAME_LENGTH: "USER_FIRST_NAME_LENGTH",
+  LAST_NAME_LENGTH: "USER_LAST_NAME_LENGTH",
+  INVALID_EMAIL: "USER_INVALID_EMAIL",
+  PASSWORD_TOO_SHORT: "USER_PASSWORD_TOO_SHORT",
+  PASSWORDS_DONT_MATCH: "USER_PASSWORDS_DONT_MATCH",
+  INVALID_2FA_SESSION: "USER_INVALID_2FA_SESSION",
+  CODE_EXPIRED: "USER_2FA_CODE_EXPIRED",
+  INCORRECT_2FA_CODE: "USER_INCORRECT_2FA_CODE",
+  ACCOUNT_DEACTIVATED_ADMIN: "USER_ACCOUNT_DEACTIVATED_ADMIN",
+  ACCOUNT_DEACTIVATED_SELF: "USER_ACCOUNT_DEACTIVATED_SELF",
+  ACCOUNT_DEACTIVATED: "USER_ACCOUNT_DEACTIVATED",
+  ACCOUNT_ALREADY_DEACTIVATED: "USER_ACCOUNT_ALREADY_DEACTIVATED",
+  ALREADY_EXISTS: "USER_ALREADY_EXISTS",
+  CREATION_FAILED: "USER_CREATION_FAILED",
+  REACTIVATION_FAILED: "USER_REACTIVATION_FAILED",
+  NOT_FOUND: "USER_NOT_FOUND",
+  INVALID_CREDENTIALS: "USER_INVALID_CREDENTIALS",
+  UNAUTHORIZED: "USER_UNAUTHORIZED",
+  UNAUTHORIZED_REQUEST: "USER_UNAUTHORIZED_REQUEST",
+  TOKEN_ERROR: "USER_TOKEN_ERROR",
+  TWO_FACTOR_RATE_LIMIT: "USER_2FA_RATE_LIMIT",
+  TWO_FACTOR_RESEND_FAILED: "USER_2FA_RESEND_FAILED",
+  ORG_LOOKUP_FAILED: "USER_ORG_LOOKUP_FAILED",
+  EMAIL_SEND_FAILED: "USER_EMAIL_SEND_FAILED",
+  EMAIL_REQUIRED: "USER_EMAIL_REQUIRED",
+  PASSWORD_UPDATE_FAILED: "USER_PASSWORD_UPDATE_FAILED",
+  RESET_TOKEN_INVALID: "USER_RESET_TOKEN_INVALID",
+  PASSWORD_REQUIRED: "USER_PASSWORD_REQUIRED",
+  INCORRECT_PASSWORD: "USER_INCORRECT_PASSWORD",
+  DEACTIVATION_FAILED: "USER_DEACTIVATION_FAILED",
+};
+
+const USER_ERROR_MESSAGES = {
+  USER_ALL_FIELDS_REQUIRED: "All fields are required.",
+  USER_FIRST_NAME_LENGTH: "First name must be between 2 and 25 characters.",
+  USER_LAST_NAME_LENGTH: "Last name must be between 2 and 25 characters.",
+  USER_INVALID_EMAIL: "A valid email address is required.",
+  USER_PASSWORD_TOO_SHORT: "Password must be at least 8 characters.",
+  USER_PASSWORDS_DONT_MATCH: "Passwords do not match.",
+  USER_INVALID_2FA_SESSION: "Your verification session is invalid or expired.",
+  USER_2FA_CODE_EXPIRED: "The verification code has expired.",
+  USER_INCORRECT_2FA_CODE: "The verification code is incorrect.",
+  USER_ACCOUNT_DEACTIVATED_ADMIN: "Your account has been deactivated by an administrator.",
+  USER_ACCOUNT_DEACTIVATED_SELF: "Your account is deactivated. You may reactivate it by registering again.",
+  USER_ACCOUNT_DEACTIVATED: "This account is currently deactivated.",
+  USER_ACCOUNT_ALREADY_DEACTIVATED: "Your account is already deactivated.",
+  USER_ALREADY_EXISTS: "This email is already associated with an active account.",
+  USER_CREATION_FAILED: "Failed to create user account.",
+  USER_REACTIVATION_FAILED: "Failed to reactivate your account.",
+  USER_NOT_FOUND: "No account found with this email.",
+  USER_INVALID_CREDENTIALS: "Invalid email or password.",
+  USER_UNAUTHORIZED: "You must be logged in to access this resource.",
+  USER_UNAUTHORIZED_REQUEST: "Unauthorized request.",
+  USER_TOKEN_ERROR: "Failed to generate authentication token.",
+  USER_2FA_RATE_LIMIT: "Please wait before requesting a new code.",
+  USER_2FA_RESEND_FAILED: "Failed to resend verification code.",
+  USER_ORG_LOOKUP_FAILED: "Failed to load organisation details.",
+  USER_EMAIL_SEND_FAILED: "Failed to send email.",
+  USER_EMAIL_REQUIRED: "Email is required.",
+  USER_PASSWORD_UPDATE_FAILED: "Failed to update your password.",
+  USER_RESET_TOKEN_INVALID: "Invalid or expired password reset token.",
+  USER_PASSWORD_REQUIRED: "Password is required.",
+  USER_INCORRECT_PASSWORD: "Incorrect password.",
+  USER_DEACTIVATION_FAILED: "Failed to deactivate your account.",
+};
+
+const USER_SUCCESS_CODES = {
+  REGISTER_SUCCESS: "USER_REGISTER_SUCCESS",
+  PROFILE_UPDATED: "USER_PROFILE_UPDATED",
+  PASSWORD_RESET_SUCCESS: "USER_PASSWORD_RESET_SUCCESS",
+  ACCOUNT_DEACTIVATED: "USER_ACCOUNT_DEACTIVATED",
+  LOGOUT_SUCCESS: "USER_LOGOUT_SUCCESS",
+};
+
+const USER_SUCCESS_MESSAGES = {
+  USER_REGISTER_SUCCESS: "Registration completed successfully.",
+  USER_PROFILE_UPDATED: "Profile updated successfully.",
+  USER_PASSWORD_RESET_SUCCESS: "Password reset successfully.",
+  USER_ACCOUNT_DEACTIVATED: "Account deactivated successfully.",
+  USER_LOGOUT_SUCCESS:"Logged out successfully.",
+};
+
+// ============================================================================
+// DONOR (Notifications, submitting donations, descriptions)
+// ============================================================================
+
+const DONOR_ERROR_CODES = {
+  REQUIRE_AT_LEAST_ONE_IMAGE: "DONOR_REQUIRE_AT_LEAST_ONE_IMAGE",
+  FAILED_TO_LOAD_NOTIFICATIONS: "DONOR_FAILED_TO_LOAD_NOTIFICATIONS",
+  FAILED_TO_MARK_READ: "DONOR_FAILED_TO_MARK_READ",
+  FAILED_TO_LOAD_HISTORY: "DONOR_FAILED_TO_LOAD_HISTORY",
+  FAILED_TO_GENERATE_DESCRIPTION: "DONOR_FAILED_TO_GENERATE_DESCRIPTION",
+};
+
+const DONOR_ERROR_MESSAGES = {
+  DONOR_REQUIRE_AT_LEAST_ONE_IMAGE: "At least one image is required.",
+  DONOR_FAILED_TO_LOAD_NOTIFICATIONS: "Failed to load notifications.",
+  DONOR_FAILED_TO_MARK_READ: "Failed to update notification.",
+  DONOR_FAILED_TO_LOAD_HISTORY: "Failed to load donation history.",
+  DONOR_FAILED_TO_GENERATE_DESCRIPTION: "Unable to generate item description.",
+};
+
+const DONOR_SUCCESS_CODES = {
+  DONATION_REQUEST_SUCCESS: "DONOR_DONATION_REQUEST_SUCCESS",
+  NOTIFICATION_MARKED_READ: "DONOR_NOTIFICATION_MARKED_READ",
+  NOTIFICATIONS_MARKED_ALL: "DONOR_NOTIFICATIONS_MARKED_ALL",
+};
+
+const DONOR_SUCCESS_MESSAGES = {
+  DONOR_DONATION_REQUEST_SUCCESS: "Donation request submitted successfully.",
+  DONOR_NOTIFICATION_MARKED_READ: "Notification marked as read.",
+  DONOR_NOTIFICATIONS_MARKED_ALL: "All notifications marked as read.",
+};
+
+// ============================================================================
+// ORGANISATION (Staff actions, donations, inventory, performance)
+// ============================================================================
+
+const ORG_ERROR_CODES = {
+  FAILED_TO_GET_ACTIVE_ORGS: "ORG_FAILED_TO_GET_ACTIVE_ORGS",
+  INVALID_ORG_ID: "ORG_INVALID_ORG_ID",
+
+  FAILED_TO_GET_DONATION_REQUESTS: "ORG_FAILED_TO_GET_DONATION_REQUESTS",
+  INVALID_DONATION_STATUS: "ORG_INVALID_DONATION_STATUS",
+  MISSING_STAFF_HANDLER_ID: "ORG_MISSING_STAFF_HANDLER_ID",
+  DECLINE_REASON_REQUIRED: "ORG_DECLINE_REASON_REQUIRED",
+  INVALID_STAFF_ID: "ORG_INVALID_STAFF_ID",
+  DONATION_NOT_FOUND: "ORG_DONATION_NOT_FOUND",
+
+  FAILED_TO_PARSE_IMAGES: "ORG_FAILED_TO_PARSE_IMAGES",
+  FAILED_TO_ADD_TO_INVENTORY: "ORG_FAILED_TO_ADD_TO_INVENTORY",
+  DONOR_LOOKUP_FAILED: "ORG_DONOR_LOOKUP_FAILED",
+
+  FAILED_TO_FETCH_INVENTORY: "ORG_FAILED_TO_FETCH_INVENTORY",
+  INVENTORY_ITEM_NOT_FOUND: "ORG_INVENTORY_ITEM_NOT_FOUND",
+  FAILED_TO_REMOVE_INVENTORY_ITEM: "ORG_FAILED_TO_REMOVE_INVENTORY_ITEM",
+  FAILED_TO_UPDATE_INVENTORY: "ORG_FAILED_TO_UPDATE_INVENTORY",
+
+  BENEFICIARY_GROUP_REQUIRED: "ORG_BENEFICIARY_GROUP_REQUIRED",
+  FAILED_TO_INSERT_DISTRIBUTION: "ORG_FAILED_TO_INSERT_DISTRIBUTION",
+
+  STAFF_NOT_AUTHORISED: "ORG_STAFF_NOT_AUTHORISED",
+
+  FAILED_TO_GET_DISTRIBUTION_RECORDS: "ORG_FAILED_TO_GET_DISTRIBUTION_RECORDS",
+  FAILED_TO_GET_ORG_SUMMARY: "ORG_FAILED_TO_GET_ORG_SUMMARY",
+  FAILED_TO_GET_STATUS_BREAKDOWN: "ORG_FAILED_TO_GET_STATUS_BREAKDOWN",
+  FAILED_TO_GET_CATEGORY_BREAKDOWN: "ORG_FAILED_TO_GET_CATEGORY_BREAKDOWN",
+  FAILED_TO_GET_DISTRIBUTION_MONTHLY: "ORG_FAILED_TO_GET_DISTRIBUTION_MONTHLY",
+  FAILED_TO_GET_ENVIRONMENTAL_MONTHLY:
+    "ORG_FAILED_TO_GET_ENVIRONMENTAL_MONTHLY",
+  FAILED_TO_GET_TOP_NEEDED: "ORG_FAILED_TO_GET_TOP_NEEDED",
+  FAILED_TO_GET_PERFORMANCE_METRICS: "ORG_FAILED_TO_GET_PERFORMANCE_METRICS",
+};
+
+const ORG_ERROR_MESSAGES = {
+  ORG_FAILED_TO_GET_ACTIVE_ORGS: "Failed to retrieve active organisations.",
+  ORG_INVALID_ORG_ID: "Organisation ID is required.",
+  ORG_FAILED_TO_GET_DONATION_REQUESTS: "Failed to retrieve donation requests.",
+  ORG_INVALID_DONATION_STATUS: "Invalid donation status.",
+  ORG_MISSING_STAFF_HANDLER_ID: "Missing staff handler ID.",
+  ORG_DECLINE_REASON_REQUIRED:
+    "A reason is required when declining a donation.",
+  ORG_INVALID_STAFF_ID: "Invalid staff ID.",
+  ORG_DONATION_NOT_FOUND: "Donation transaction not found.",
+
+  ORG_FAILED_TO_PARSE_IMAGES: "Failed to parse donation images.",
+  ORG_FAILED_TO_ADD_TO_INVENTORY: "Failed to add donation to inventory.",
+  ORG_DONOR_LOOKUP_FAILED: "Donation updated but donor lookup failed.",
+
+  ORG_FAILED_TO_FETCH_INVENTORY: "Failed to fetch inventory items.",
+  ORG_INVENTORY_ITEM_NOT_FOUND: "Inventory item not found.",
+  ORG_FAILED_TO_REMOVE_INVENTORY_ITEM: "Failed to remove inventory item.",
+  ORG_FAILED_TO_UPDATE_INVENTORY: "Failed to update inventory item.",
+
+  ORG_BENEFICIARY_GROUP_REQUIRED: "Beneficiary group is required.",
+  ORG_FAILED_TO_INSERT_DISTRIBUTION: "Failed to create distribution record.",
+
+  ORG_STAFF_NOT_AUTHORISED: "Not authorised to perform this action.",
+
+  ORG_FAILED_TO_GET_DISTRIBUTION_RECORDS:
+    "Failed to fetch distribution records.",
+  ORG_FAILED_TO_GET_ORG_SUMMARY: "Failed to load organisation summary.",
+  ORG_FAILED_TO_GET_STATUS_BREAKDOWN: "Failed to load status breakdown.",
+  ORG_FAILED_TO_GET_CATEGORY_BREAKDOWN: "Failed to load category breakdown.",
+  ORG_FAILED_TO_GET_DISTRIBUTION_MONTHLY:
+    "Failed to load distribution monthly trend.",
+  ORG_FAILED_TO_GET_ENVIRONMENTAL_MONTHLY:
+    "Failed to load environmental impact data.",
+  ORG_FAILED_TO_GET_TOP_NEEDED: "Failed to load category demand metrics.",
+  ORG_FAILED_TO_GET_PERFORMANCE_METRICS:
+    "Failed to load organisation performance metrics.",
+};
+
+const ORG_SUCCESS_CODES = {
+  DONATION_STATUS_UPDATED: "ORG_DONATION_STATUS_UPDATED",
+  INVENTORY_ITEM_REMOVED: "ORG_INVENTORY_ITEM_REMOVED",
+  INVENTORY_ITEM_DISTRIBUTED: "ORG_INVENTORY_ITEM_DISTRIBUTED",
+};
+
+const ORG_SUCCESS_MESSAGES = {
+  ORG_DONATION_STATUS_UPDATED: "Donation status updated successfully.",
+  ORG_INVENTORY_ITEM_REMOVED: "Inventory item removed successfully.",
+  ORG_INVENTORY_ITEM_DISTRIBUTED: "Inventory item distributed successfully.",
+};
+
+// ============================================================================
+// ADMIN
+// ============================================================================
+
+const ADMIN_ERROR_CODES = {
+  INVALID_USER_ID: "ADMIN_INVALID_USER_ID",
+  INVALID_ROLE: "ADMIN_INVALID_ROLE",
+  INVALID_STATUS: "ADMIN_INVALID_STATUS",
+  CANNOT_DEACTIVATE_ADMIN: "ADMIN_CANNOT_DEACTIVATE_ADMIN",
+  CANNOT_DEMOTE_ADMIN: "ADMIN_CANNOT_DEMOTE_ADMIN",
+  USER_NOT_FOUND: "ADMIN_USER_NOT_FOUND",
+  USER_NOT_FOUND_FOR_STAFF: "STAFF_USER_NOT_FOUND",
+  USER_UPDATE_FAILED: "ADMIN_USER_UPDATE_FAILED",
+  ORG_NOT_FOUND: "ADMIN_ORGANISATION_NOT_FOUND",
+  ORG_ALREADY_EXISTS: "ADMIN_ORGANISATION_ALREADY_EXISTS",
+  ORG_STATUS_UNCHANGED: "ADMIN_ORGANISATION_STATUS_UNCHANGED",
+  ORG_UPDATE_FAILED: "ADMIN_ORGANISATION_UPDATE_FAILED",
+  ORG_CREATION_FAILED: "ADMIN_ORGANISATION_CREATION_FAILED",
+  INVALID_ORG_NAME: "ADMIN_INVALID_ORG_NAME",
+  INVALID_POST_CODE: "ADMIN_INVALID_POST_CODE",
+  INVALID_CONTACT_EMAIL: "ADMIN_INVALID_CONTACT_EMAIL",
+  ALL_FIELDS_REQUIRED: "ADMIN_ALL_FIELDS_REQUIRED",
+  DB_ERROR: "ADMIN_DATABASE_ERROR",
+  AUDIT_FETCH_FAILED: "ADMIN_AUDIT_FETCH_FAILED",
+  STAFF_EMAIL_REQUIRED: "ADMIN_STAFF_EMAIL_REQUIRED",
+  STAFF_NOT_FOUND: "ADMIN_STAFF_NOT_FOUND",
+  STAFF_ALREADY_ACTIVE: "ADMIN_STAFF_ALREADY_ACTIVE",
+  STAFF_ASSIGN_FAILED: "ADMIN_STAFF_ASSIGN_FAILED",
+  STAFF_REMOVE_FAILED: "ADMIN_STAFF_REMOVE_FAILED",
+  REPORT_GENERATION_FAILED: "ADMIN_REPORT_GENERATION_FAILED",
+  REPORT_EXPORT_FAILED: "ADMIN_REPORT_EXPORT_FAILED",
+  ORG_NAME_EXISTS: "ADMIN_ORG_NAME_EXISTS",
+  FAILED_TO_ADD_ORGANISATION: "ADMIN_FAILED_TO_ADD_ORGANISATION",
+  INVALID_ORGANISATION_ID: "ADMIN_INVALID_ORGANISATION_ID",
+  ORG_ALREADY_IN_STATE: "ADMIN_ORG_ALREADY_IN_STATE",
+  FAILED_TO_UPDATE_ORG_STATUS: "ADMIN_FAILED_TO_UPDATE_ORG_STATUS",
+  FAILED_TO_FETCH_LOGS: "ADMIN_FAILED_TO_FETCH_LOGS",
+  EMAIL_REQUIRED: "ADMIN_EMAIL_REQUIRED",
+  ORG_INACTIVE_CANNOT_ADD_STAFF: "ADMIN_ORG_INACTIVE_CANNOT_ADD_STAFF",
+  USER_NOT_FOUND_FOR_STAFF: "ADMIN_USER_NOT_FOUND_FOR_STAFF",
+  STAFF_CANNOT_BE_ADMIN: "ADMIN_STAFF_CANNOT_BE_ADMIN",
+  USER_ALREADY_STAFF: "ADMIN_USER_ALREADY_STAFF",
+  FAILED_TO_ADD_STAFF: "ADMIN_FAILED_TO_ADD_STAFF",
+  FAILED_TO_REVERT_ROLE: "ADMIN_FAILED_TO_REVERT_ROLE",
+  FAILED_TO_GENERATE_REPORT: "FAILED_TO_GENERATE_REPORT",
+  FAILED_TO_EXPORT_REPORT_PDF: "FAILED_TO_EXPORT_REPORT_PDF",
+};
+
+const ADMIN_ERROR_MESSAGES = {
+  ADMIN_INVALID_USER_ID: "A valid user ID is required.",
+  ADMIN_INVALID_ROLE: "Invalid role selected.",
+  ADMIN_INVALID_STATUS: "Invalid activation status.",
+  ADMIN_USER_NOT_FOUND: "User not found.",
+  ADMIN_USER_UPDATE_FAILED: "Failed to update the user record.",
+  ADMIN_CANNOT_DEACTIVATE_ADMIN: "You cannot deactivate another admin.",
+  ADMIN_CANNOT_DEMOTE_ADMIN: "You cannot demote another admin.",
+  ADMIN_ORGANISATION_NOT_FOUND: "Organisation not found.",
+  ADMIN_ORGANISATION_ALREADY_EXISTS: "An organisation with this name already exists.",
+  ADMIN_ORGANISATION_STATUS_UNCHANGED: "Organisation is already in the requested state.",
+  ADMIN_ORGANISATION_UPDATE_FAILED: "Failed to update organisation status.",
+  ADMIN_ORGANISATION_CREATION_FAILED: "Failed to create organisation.",
+  ADMIN_INVALID_ORG_NAME: "Organisation name must be between 4 and 35 characters.",
+  ADMIN_INVALID_POST_CODE: "Invalid post code format.",
+  ADMIN_INVALID_CONTACT_EMAIL: "Invalid contact email format.",
+  ADMIN_ALL_FIELDS_REQUIRED: "All organisation fields are required.",
+  ADMIN_DATABASE_ERROR: "A database error occurred.",
+  ADMIN_AUDIT_FETCH_FAILED: "Failed to load audit logs.",
+  ADMIN_STAFF_EMAIL_REQUIRED: "Email is required.",
+  ADMIN_STAFF_NOT_FOUND: "User not found.",
+  ADMIN_STAFF_ALREADY_ACTIVE: "User is already active staff for an organisation.",
+  ADMIN_STAFF_ASSIGN_FAILED: "Failed to add staff to organisation.",
+  ADMIN_STAFF_REMOVE_FAILED: "Failed to remove staff from organisation.",
+  ADMIN_REPORT_GENERATION_FAILED: "Failed to generate admin report.",
+  ADMIN_REPORT_EXPORT_FAILED: "Failed to export PDF report.",
+  ADMIN_ORG_NAME_EXISTS: "An organisation with this name already exists.",
+  ADMIN_FAILED_TO_ADD_ORGANISATION: "Failed to add new organisation.",
+  ADMIN_INVALID_ORGANISATION_ID: "A valid organisation ID is required.",
+  ADMIN_ORG_ALREADY_IN_STATE: "Organisation is already in this state.",
+  ADMIN_FAILED_TO_UPDATE_ORG_STATUS: "Failed to update organisation status.",
+  ADMIN_FAILED_TO_FETCH_LOGS: "Failed to fetch admin audit logs.",
+  ADMIN_EMAIL_REQUIRED: "Email is required.",
+  ADMIN_ORG_INACTIVE_CANNOT_ADD_STAFF: "Cannot add staff to an inactive organisation.",
+  ADMIN_USER_NOT_FOUND_FOR_STAFF: "No user found with the given email.",
+  ADMIN_STAFF_CANNOT_BE_ADMIN: "Admins cannot be assigned as staff.",
+  ADMIN_USER_ALREADY_STAFF: "User is already active staff for an organisation.",
+  ADMIN_FAILED_TO_ADD_STAFF: "Failed to add staff to organisation.",
+  ADMIN_FAILED_TO_REVERT_ROLE: "Failed to revert user role.",
+  ADMIN_FAILED_TO_GENERATE_REPORT: "Failed to generate admin report.",
+  ADMIN_FAILED_TO_EXPORT_REPORT_PDF: "Failed to export admin report as PDF.",
+};
+
+const ADMIN_SUCCESS_CODES = {
+  USER_UPDATED: "ADMIN_USER_UPDATED",
+  ORG_CREATED: "ADMIN_ORG_CREATED",
+  ORG_STATUS_UPDATED: "ADMIN_ORG_STATUS_UPDATED",
+  STAFF_ADDED: "ADMIN_STAFF_ADDED",
+  STAFF_REMOVED: "ADMIN_STAFF_REMOVED",
+  REPORT_GENERATED: "ADMIN_REPORT_GENERATED",
+  REPORT_EXPORTED: "ADMIN_REPORT_EXPORTED",
+  ORG_ADDED: "ADMIN_ORG_ADDED"
+};
+
+const ADMIN_SUCCESS_MESSAGES = {
+  ADMIN_USER_UPDATED: "User updated successfully.",
+  ADMIN_ORG_CREATED: "Organisation created successfully.",
+  ADMIN_ORG_STATUS_UPDATED: "Organisation status updated successfully.",
+  ADMIN_STAFF_ADDED: "Staff added successfully.",
+  ADMIN_STAFF_REMOVED: "Staff removed successfully.",
+  ADMIN_REPORT_GENERATED: "Report generated successfully.",
+  ADMIN_REPORT_EXPORTED: "Report exported successfully.",
+  ADMIN_ORG_ADDED: "Organisation added successfully."
+};
+
+module.exports = {
+  GENERAL_ERROR_CODES,
+  GENERAL_ERROR_MESSAGES,
+  USER_ERROR_CODES,
+  USER_ERROR_MESSAGES,
+  USER_SUCCESS_CODES,
+  USER_SUCCESS_MESSAGES,
+  DONOR_ERROR_CODES,
+  DONOR_ERROR_MESSAGES,
+  DONOR_SUCCESS_CODES,
+  DONOR_SUCCESS_MESSAGES,
+  ORG_ERROR_CODES,
+  ORG_ERROR_MESSAGES,
+  ORG_SUCCESS_CODES,
+  ORG_SUCCESS_MESSAGES,
+  ADMIN_ERROR_CODES,
+  ADMIN_ERROR_MESSAGES,
+  ADMIN_SUCCESS_CODES,
+  ADMIN_SUCCESS_MESSAGES,
+};

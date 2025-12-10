@@ -3,12 +3,8 @@ const router = express.Router();
 const donorController = require("../controllers/donorController");
 const { verifyToken, upload } = require("../middlewares/middlewares");
 
-router.post(
-  "/donations/request",
-  verifyToken,
-  upload.single("photo"),
-  donorController.submitDonationRequest
-);
+// submit a donation
+router.post("/donations/request", verifyToken, upload.array("photos", 4), donorController.submitDonationRequest);
 
 // notification routes
 router.get("/notifications", verifyToken, donorController.getDonorNotifications);

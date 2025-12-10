@@ -1,11 +1,12 @@
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 import { Box } from "@chakra-ui/react";
 import ChartCard from "../chartCard";
@@ -20,31 +21,14 @@ export default function AdminEnvironmentChart({ data, loading }) {
         <ChartEmpty message="Environmental impact will appear after distributions." />
       ) : (
         <Box w="100%" minH="300px" h="300px">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="co2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#27ae60" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#2ecc71" stopOpacity={0.2} />
-                </linearGradient>
-
-                <linearGradient id="landfill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3498db" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#2980b9" stopOpacity={0.2} />
-                </linearGradient>
-              </defs>
-
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
 
-              <XAxis dataKey="month" tick={{ fill: "#555" }} />
-              <YAxis tick={{ fill: "#555" }} />
+              <XAxis dataKey="month" tick={{ fill: "#444" }} />
+              <YAxis tick={{ fill: "#444" }} />
 
               <Tooltip
-                formatter={(value, key) => {
-                  if (key === "total_co2") return [`${value} kg`, "CO₂ Saved"];
-                  if (key === "total_landfill")
-                    return [`${value} kg`, "Landfill Saved"];
-                }}
                 contentStyle={{
                   backgroundColor: "#fff",
                   borderRadius: "8px",
@@ -52,22 +36,26 @@ export default function AdminEnvironmentChart({ data, loading }) {
                 }}
               />
 
-              <Area
+              <Legend />
+
+              <Line
                 type="monotone"
                 dataKey="total_co2"
-                stackId="1"
                 stroke="#27ae60"
-                fill="url(#co2)"
+                strokeWidth={3}
+                dot={{ r: 5 }}
+                name="CO₂ Saved (kg)"
               />
 
-              <Area
+              <Line
                 type="monotone"
                 dataKey="total_landfill"
-                stackId="1"
                 stroke="#3498db"
-                fill="url(#landfill)"
+                strokeWidth={3}
+                dot={{ r: 5 }}
+                name="Landfill Saved (kg)"
               />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
         </Box>
       )}

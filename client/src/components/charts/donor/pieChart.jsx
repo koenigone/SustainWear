@@ -13,8 +13,8 @@ export default function PieChartCategories({ data, loading }) {
       {empty ? (
         <ChartEmpty message="No donation categories yet." />
       ) : (
-        <Box w="100%" minH="260px" h="100%">
-          <ResponsiveContainer width="100%" height="100%">
+        <Box width="100%" height="260px">
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie
                 data={data}

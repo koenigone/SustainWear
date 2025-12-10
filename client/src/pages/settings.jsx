@@ -13,8 +13,8 @@ import toast from "react-hot-toast";
 import api from "../api/axiosClient";
 import { useAuth } from "../auth/authContext";
 import { useNavigate } from "react-router-dom";
-import PasswordResetModal from "../components/modals/resetPasswordModal";
-import ConfirmAccountDeactivationModal from "../components/modals/confirmAccountDeactivationModal";
+import PasswordResetModal from "../components/modals/user/resetPasswordModal";
+import ConfirmAccountDeactivationModal from "../components/modals/user/confirmAccountDeactivationModal";
 
 export default function Settings() {
   const { user, setUser } = useAuth();

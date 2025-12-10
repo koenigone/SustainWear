@@ -12,34 +12,42 @@ import {
   Text,
   Button,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
   VStack,
   HStack,
   Badge,
   Input,
+  Select,
+  Flex,
+  useBreakpointValue,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 import toast from "react-hot-toast";
+import InventoryItemModal from "../../../components/modals/staff/donationReviewModal";
 
 export default function UpdateStock() {
   const { organisation } = useAuth();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState(null);
 
+  const [selectedItem, setSelectedItem] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [beneficiary, setBeneficiary] = useState("");
   const [distributing, setDistributing] = useState(false);
 
-  // load inventory items
+  // filters
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterSize, setFilterSize] = useState("");
+  const [filterGender, setFilterGender] = useState("");
+
+  // mobile breakpoint
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  // fetch inventory
   const fetchInventory = async () => {
     try {
       if (!organisation?.org_id) return;
@@ -48,6 +56,7 @@ export default function UpdateStock() {
       setInventory(res.data);
     } catch (err) {
       console.error("Failed to load inventory", err);
+      toast.error("Failed to load inventory");
     } finally {
       setLoading(false);
     }
@@ -63,7 +72,6 @@ export default function UpdateStock() {
     onOpen();
   };
 
-  // handle Distribution Logic
   const handleDistribute = async () => {
     if (!beneficiary.trim()) {
       return toast.error("Please enter a beneficiary group.");
@@ -74,18 +82,14 @@ export default function UpdateStock() {
     try {
       await api.post(
         `/orgs/${organisation.org_id}/distribute/${selectedItem.inv_id}`,
-        {
-          beneficiary_group: beneficiary,
-        }
+        { beneficiary_group: beneficiary }
       );
 
-      // remove item from inventory list when distributed
       setInventory((prev) =>
         prev.filter((item) => item.inv_id !== selectedItem.inv_id)
       );
 
       toast.success("Item distributed successfully!");
-
       onClose();
       setSelectedItem(null);
     } catch (err) {
@@ -94,6 +98,34 @@ export default function UpdateStock() {
     } finally {
       setDistributing(false);
     }
+  };
+
+  // filtering Logic
+  const filteredInventory = useMemo(() => {
+    return inventory.filter((item) => {
+      const matchesSearch =
+        item.item_name.toLowerCase().includes(search.toLowerCase()) ||
+        item.category.toLowerCase().includes(search.toLowerCase());
+
+      const matchesCategory =
+        !filterCategory || item.category === filterCategory;
+
+      const matchesSize = !filterSize || item.size === filterSize;
+
+      const matchesGender =
+        !filterGender ||
+        item.gender === filterGender ||
+        (filterGender === "Unspecified" && !item.gender);
+
+      return matchesSearch && matchesCategory && matchesSize && matchesGender;
+    });
+  }, [inventory, search, filterCategory, filterSize, filterGender]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setFilterCategory("");
+    setFilterSize("");
+    setFilterGender("");
   };
 
   if (loading) {
@@ -109,158 +141,194 @@ export default function UpdateStock() {
 
   return (
     <Box>
-      <Heading size="lg" color="brand.green" mb={6}>
-        Inventory Stock
-      </Heading>
+      {/* FILTER BAR */}
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        align="center"
+        justify="space-between"
+        mb={4}
+        gap={3}
+        flexWrap="wrap"
+      >
+        <Input
+          placeholder="Search items…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          width={{ base: "100%", md: "30%" }}
+        />
 
-      {inventory.length === 0 ? (
+        <HStack spacing={3} flexWrap="wrap">
+          <Select
+            placeholder="Category"
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            width="150px"
+          >
+            <option value="Hoodie">Hoodie</option>
+            <option value="Jacket">Jacket</option>
+            <option value="T-Shirt">T-Shirt</option>
+          </Select>
+
+          <Select
+            placeholder="Size"
+            value={filterSize}
+            onChange={(e) => setFilterSize(e.target.value)}
+            width="120px"
+          >
+            {["XXS", "XS", "S", "M", "L", "XL", "XXL"].map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </Select>
+
+          <Select
+            placeholder="Gender"
+            value={filterGender}
+            onChange={(e) => setFilterGender(e.target.value)}
+            width="150px"
+          >
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </Select>
+
+          <Button size="sm" onClick={clearFilters}>
+            Clear
+          </Button>
+        </HStack>
+      </Flex>
+
+      {/* INVENTORY TABLE OR MOBILE CARDS */}
+      {filteredInventory.length === 0 ? (
         <Box bg="white" p={8} borderRadius="xl" shadow="md" textAlign="center">
           <Text fontSize="lg" color="gray.600">
-            No items in inventory yet.
+            No items match your filter.
           </Text>
         </Box>
       ) : (
-        <Box bg="white" p={6} borderRadius="xl" shadow="md" overflowX="auto">
-          <Table variant="simple">
-            <Thead bg="brand.beige">
-              <Tr>
-                <Th>Photo</Th>
-                <Th>Item</Th>
-                <Th>Category</Th>
-                <Th>Size</Th>
-                <Th>Condition</Th>
-                <Th>Gender</Th>
-                <Th>Added At</Th>
-                <Th>Actions</Th>
-              </Tr>
-            </Thead>
+        <>
+          {!isMobile ? (
+            // DESKTOP TABLE
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              shadow="md"
+              overflowX="auto"
+            >
+              <Table variant="simple">
+                <Thead bg="brand.beige">
+                  <Tr>
+                    <Th>Photo</Th>
+                    <Th>Item</Th>
+                    <Th>Category</Th>
+                    <Th>Size</Th>
+                    <Th>Condition</Th>
+                    <Th>Gender</Th>
+                    <Th>Added At</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
 
-            <Tbody>
-              {inventory.map((item) => (
-                <Tr key={item.inv_id}>
-                  <Td>
-                    <Image
-                      src={item.photo_url}
-                      boxSize="60px"
-                      borderRadius="md"
-                      objectFit="cover"
-                    />
-                  </Td>
+                <Tbody>
+                  {filteredInventory.map((item) => (
+                    <Tr key={item.inv_id}>
+                      <Td>
+                        <Image
+                          src={item.photo_urls?.[0]}
+                          boxSize="60px"
+                          borderRadius="md"
+                          objectFit="cover"
+                        />
+                      </Td>
 
-                  <Td fontWeight="600">{item.item_name}</Td>
+                      <Td fontWeight="600">{item.item_name}</Td>
 
-                  <Td>
-                    <Badge
-                      colorScheme="green"
-                      variant="subtle"
-                      px={2}
-                      py={1}
-                      borderRadius="md"
-                    >
-                      {item.category}
-                    </Badge>
-                  </Td>
+                      <Td>
+                        <Badge colorScheme="green">{item.category}</Badge>
+                      </Td>
 
-                  <Td>{item.size}</Td>
-                  <Td>{item.item_condition}</Td>
-                  <Td>{item.gender || "Unspecified"}</Td>
+                      <Td>{item.size}</Td>
+                      <Td>{item.item_condition}</Td>
+                      <Td>{item.gender || "Unspecified"}</Td>
 
-                  <Td color="gray.600">
-                    {new Date(item.added_at).toLocaleDateString()}
-                  </Td>
+                      <Td color="gray.600">
+                        {new Date(item.added_at).toLocaleDateString()}
+                      </Td>
 
-                  <Td>
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      onClick={() => handlePreview(item)}
-                    >
-                      View
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      )}
-
-      {/* ITEM REVIEW */}
-      {selectedItem && (
-        <Modal isOpen={isOpen} onClose={onClose} size="lg">
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader color="brand.green">
-              {selectedItem.item_name}
-            </ModalHeader>
-            <ModalCloseButton />
-
-            <ModalBody pb={6}>
-              <VStack spacing={4} align="start">
-                <Image
-                  src={selectedItem.photo_url}
-                  borderRadius="lg"
-                  width="100%"
-                  maxH="300px"
-                  objectFit="cover"
-                />
-
-                <HStack spacing={4}>
-                  <Badge colorScheme="green">{selectedItem.category}</Badge>
-                  <Badge colorScheme="blue">Size: {selectedItem.size}</Badge>
-                </HStack>
-
-                <Text>
-                  <strong>Condition:</strong> {selectedItem.item_condition}
-                </Text>
-
-                <Text>
-                  <strong>Gender:</strong>{" "}
-                  {selectedItem.gender || "Unspecified"}
-                </Text>
-
-                <Text>
-                  <strong>Description:</strong> {selectedItem.description}
-                </Text>
-
-                <Text color="gray.600">
-                  <strong>Added At:</strong>{" "}
-                  {new Date(selectedItem.added_at).toLocaleString()}
-                </Text>
-
-                {/* DISTRIBUTION FORM*/}
+                      <Td>
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          onClick={() => handlePreview(item)}
+                        >
+                          View
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          ) : (
+            // MOBILE CARDS
+            <VStack spacing={4} align="stretch">
+              {filteredInventory.map((item) => (
                 <Box
-                  w="100%"
-                  mt={4}
+                  key={item.inv_id}
+                  bg="white"
                   p={4}
-                  bg="gray.50"
-                  borderRadius="md"
-                  border="1px solid #e2e8f0"
+                  borderRadius="lg"
+                  shadow="sm"
                 >
-                  <Heading size="sm" mb={3} color="brand.green">
-                    Distribute Item
-                  </Heading>
-
-                  <Input
-                    placeholder="Beneficiary group (e.g., Local Shelter)"
-                    value={beneficiary}
-                    onChange={(e) => setBeneficiary(e.target.value)}
+                  <Image
+                    src={item.photo_urls?.[0]}
+                    borderRadius="md"
+                    width="100%"
+                    maxH="200px"
+                    objectFit="cover"
                     mb={3}
                   />
 
+                  <Heading size="md">{item.item_name}</Heading>
+
+                  <HStack mt={2} spacing={2}>
+                    <Badge colorScheme="green">{item.category}</Badge>
+                    <Badge colorScheme="blue">Size: {item.size}</Badge>
+                  </HStack>
+
+                  <Text mt={1}>Condition: {item.item_condition}</Text>
+                  <Text>Gender: {item.gender || "Unspecified"}</Text>
+
+                  <Text color="gray.600" mt={1}>
+                    Added: {new Date(item.added_at).toLocaleDateString()}
+                  </Text>
+
                   <Button
-                    width="100%"
                     colorScheme="green"
-                    isLoading={distributing}
-                    onClick={handleDistribute}
+                    size="sm"
+                    w="100%"
+                    mt={3}
+                    onClick={() => handlePreview(item)}
                   >
-                    Confirm Distribution
+                    View
                   </Button>
                 </Box>
-              </VStack>
-            </ModalBody>
-          </ModalContent>
-        </Modal>
+              ))}
+            </VStack>
+          )}
+        </>
+      )}
+
+      {/* ITEM PREVIEW MODAL*/}
+      {selectedItem && (
+        <InventoryItemModal
+          isOpen={isOpen}
+          onClose={onClose}
+          item={selectedItem}
+          beneficiary={beneficiary}
+          setBeneficiary={setBeneficiary}
+          distributing={distributing}
+          handleDistribute={handleDistribute}
+        />
       )}
     </Box>
   );

@@ -11,8 +11,8 @@ export default function BarChartImpact({ data, loading }) {
       {empty ? (
         <ChartEmpty message="CO₂ impact will appear once donations are distributed." />
       ) : (
-        <Box w="100%" minH="260px" h="100%">
-          <ResponsiveContainer width="100%" height="100%">
+        <Box width="100%" height="260px">
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={data}>
               <defs>
                 <linearGradient id="co2Bar" x1="0" y1="0" x2="0" y2="1">

@@ -10,8 +10,8 @@ import {
   Center,
 } from "@chakra-ui/react";
 import api from "../../api/axiosClient";
-import toast from "react-hot-toast";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { validateRegisterForm } from "../../rules/validateRegister";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -20,58 +20,47 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "",
   });
+
+  const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setErrorMessage(""); // clear error when user types
+  };
 
-  // validate front end form
+  // FRONTEND VALIDATION (INLINE ERRORS)
   const validateForm = () => {
-    const { first_name, last_name, email, password, confirmPassword } = form;
+    const result = validateRegisterForm(form);
 
-    if (!first_name.trim() || !last_name.trim()) {
-      toast.error("First and last name are required");
+    if (!result.valid) {
+      setErrorMessage(result.message);
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
-      return false;
-    }
-
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return false;
-    }
-
+    setErrorMessage("");
     return true;
   };
 
-  const handleSubmit = async () => { // submit register form
-
-    if (!validateForm()) return; // stop if validation fails
+  // SUBMIT REGISTER FORM
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
 
     try {
       const res = await api.post("/register", form);
-      toast.success(res.data.message);
-      setTimeout(() => navigate("/login"), 1000);
+      navigate("/login");
     } catch (err) {
-      console.error("error 1", err);
-      console.error("error 2", err.response);
-      toast.error(err.response?.data?.errMessage || "Something went wrong");
+      setErrorMessage(
+        err.response?.data?.message ||
+          err.response?.data?.errMessage ||
+          "Something went wrong"
+      );
     }
   };
 
-  // disable submit button if any field is empty
+  // disable button if any field is empty
   const isFormInvalid =
     !form.first_name ||
     !form.last_name ||
@@ -82,63 +71,95 @@ export default function Register() {
   return (
     <Center minH="100vh" bg="brand.beige">
       <Box bg="brand.green" p={10} rounded="md" color="white" w="sm">
-        <Heading size="lg" textAlign="center" mb={6}>
+        <Heading size="lg" textAlign="center" mb={4}>
           Create Your Account
         </Heading>
+
+        {/* INLINE ERROR MESSAGE */}
+        {errorMessage && (
+          <Text
+            bg="red.100"
+            color="red.700"
+            p={2}
+            mb={3}
+            rounded="md"
+            fontSize="sm"
+            textAlign="center"
+          >
+            {errorMessage}
+          </Text>
+        )}
+
         <VStack spacing={4}>
           <Input
             placeholder="First Name"
-            _placeholder={{ color: "gray.400" }}
             name="first_name"
+            value={form.first_name}
             onChange={handleChange}
             bg="white"
             color="black"
+            _placeholder={{ color: "gray.400" }}
           />
+
           <Input
             placeholder="Last Name"
-            _placeholder={{ color: "gray.400" }}
             name="last_name"
+            value={form.last_name}
             onChange={handleChange}
             bg="white"
             color="black"
+            _placeholder={{ color: "gray.400" }}
           />
+
           <Input
             placeholder="Email"
-            _placeholder={{ color: "gray.400" }}
             name="email"
+            value={form.email}
             onChange={handleChange}
             bg="white"
             color="black"
+            _placeholder={{ color: "gray.400" }}
           />
+
           <Input
             placeholder="Password"
-            _placeholder={{ color: "gray.400" }}
             name="password"
             type="password"
+            value={form.password}
             onChange={handleChange}
             bg="white"
             color="black"
+            _placeholder={{ color: "gray.400" }}
           />
+
           <Input
             placeholder="Confirm Password"
-            _placeholder={{ color: "gray.400" }}
             name="confirmPassword"
             type="password"
+            value={form.confirmPassword}
             onChange={handleChange}
             bg="white"
             color="black"
+            _placeholder={{ color: "gray.400" }}
           />
+
           <Button
             bg="white"
             color="brand.green"
             onClick={handleSubmit}
             isDisabled={isFormInvalid}
+            width="100%"
           >
             Register
           </Button>
 
           <Box>
-            <Text opacity="80%">Already a user? <Link as={RouterLink} to="/login" textDecor="underline">Login</Link></Text>
+            <Text opacity="80%">
+              Already a user?{" "}
+              <Link as={RouterLink} to="/login" textDecor="underline">
+                Login
+              </Link>
+            </Text>
           </Box>
         </VStack>
       </Box>
