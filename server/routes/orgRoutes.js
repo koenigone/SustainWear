@@ -7,6 +7,7 @@ router.get("/my-organisation", verifyToken, orgController.getStaffOrganisation);
 router.get("/active", orgController.getActiveOrganisations);
 router.get("/:org_id/donation-requests", orgController.getAllDonationRequests);
 router.post("/:transaction_id/donation-request-update", orgController.updateDonationRequestStatus);
+router.get("/:org_id/staff-list", verifyToken, orgController.getOrganisationStaffList);
 
 // inventory routes
 router.get("/:org_id/inventory", verifyToken, orgController.getInventoryItems);

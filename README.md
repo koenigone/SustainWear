@@ -8,7 +8,6 @@ Built with React, Express.js, and SQLite, SustainWear provides a seamless experi
 Features include real-time notifications, AI-powered item descriptions, sustainability metrics, admin reporting tools, and complete activity logs.
 
 
-
 <strong>Donor Dashboard</strong>
 <img width="2557" height="1323" alt="image" src="https://github.com/user-attachments/assets/19e4f17d-bdee-49a0-9fef-c10e015e6bc3" />
 

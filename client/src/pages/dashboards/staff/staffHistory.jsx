@@ -263,7 +263,6 @@ const StaffHistory = () => {
   return (
     <Box>
       <VStack>
-        <Heading>Staff History Page</Heading>
         {/* Controls */}
         <HStack>
           <Button

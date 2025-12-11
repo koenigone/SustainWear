@@ -63,7 +63,6 @@ const getActiveOrganisations = (req, res) => {
 // -----------------------------
 
 // GET ALL DONATION REQUESTS
-// GET ALL DONATION REQUESTS
 const getAllDonationRequests = (req, res) => {
   const { org_id } = req.params;
 
@@ -337,6 +336,45 @@ function finishSuccess(res, donation, transaction_id, status, reason) {
   });
 }
 
+// GET ALL STAFF MEMBERS OF AN ORGANISATION (ACTIVE + REMOVED HISTORY)
+const getOrganisationStaffList = (req, res) => {
+  const { org_id } = req.params;
+
+  if (!org_id) {
+    return res.status(400).json({
+      code: ORG_ERROR_CODES.INVALID_ORG_ID,
+      message: ORG_ERROR_MESSAGES.ORG_INVALID_ORG_ID
+    });
+  }
+
+  const getOrgStaffQuery = `
+    SELECT 
+      os.org_staff_id,
+      os.user_id AS staff_id,
+      os.staff_role,
+      os.is_active,
+      os.assigned_at,
+      os.removed_at,
+      u.first_name || ' ' || u.last_name AS staff_name
+    FROM ORGANISATION_STAFF os
+    JOIN USER u ON os.user_id = u.user_id
+    WHERE os.org_id = ?
+    ORDER BY os.assigned_at DESC
+  `;
+
+  db.all(getOrgStaffQuery, [org_id], (err, rows) => {
+    if (err) {
+      console.error("Error fetching organisation staff list:", err.message);
+      return res.status(500).json({
+        code: ORG_ERROR_CODES.FAILED_TO_FETCH_ORG_STAFF_LIST,
+        message: ORG_ERROR_MESSAGES.ORG_FAILED_TO_FETCH_ORG_STAFF_LIST,
+        error: err.message
+      });
+    }
+
+    return res.status(200).json(rows);
+  });
+};
 
 // -----------------------------
 // INVENTORY
@@ -910,6 +948,7 @@ module.exports = {
   getActiveOrganisations,
   getAllDonationRequests,
   updateDonationRequestStatus,
+  getOrganisationStaffList,
   getInventoryItems,
   getInventoryItemById,
   removeInventoryItem,
