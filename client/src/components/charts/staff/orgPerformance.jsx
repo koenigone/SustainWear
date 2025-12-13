@@ -20,7 +20,7 @@ export default function OrgPerformanceMetrics({ metrics = {} }) {
 
         {metrics.most_active_staff ? (
           <Box>
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color="gray.700">
               Most Active Staff
             </Text>
             <HStack justify="space-between" p={2}>
@@ -33,7 +33,7 @@ export default function OrgPerformanceMetrics({ metrics = {} }) {
             </HStack>
           </Box>
         ) : (
-          <Text fontSize="sm" color="gray.400" mt={2}>
+          <Text fontSize="sm" color="gray.800" mt={2}>
             No staff activity yet.
           </Text>
         )}
@@ -45,7 +45,7 @@ export default function OrgPerformanceMetrics({ metrics = {} }) {
 function Metric({ label, value }) {
   return (
     <HStack justify="space-between">
-      <Text fontSize="sm" color="gray.500">
+      <Text fontSize="sm" color="gray.700">
         {label}
       </Text>
       <Text fontSize="lg" fontWeight="700" color="brand.green">

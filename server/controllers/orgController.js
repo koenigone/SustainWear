@@ -507,7 +507,7 @@ const distributeInventoryItem = (req, res) => {
   if (!beneficiary_group || beneficiary_group.trim().length === 0) {
     return res.status(400).json({
       code: ORG_ERROR_CODES.BENEFICIARY_GROUP_REQUIRED,
-      message: ORG_ERROR_MESSAGES.ORG_BENEFICIARY_GROUP_REQUIRED
+      message: ORG_ERROR_MESSAGES.ORG_BENEFICIARY_GROUP_REQUIRED,
     });
   }
 
@@ -520,14 +520,14 @@ const distributeInventoryItem = (req, res) => {
       return res.status(500).json({
         code: GENERAL_ERROR_CODES.DATABASE_ERROR,
         message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
-        error: err.message
+        error: err.message,
       });
     }
 
     if (!staffRow) {
       return res.status(403).json({
         code: ORG_ERROR_CODES.STAFF_NOT_AUTHORISED,
-        message: ORG_ERROR_MESSAGES.ORG_STAFF_NOT_AUTHORISED
+        message: ORG_ERROR_MESSAGES.ORG_STAFF_NOT_AUTHORISED,
       });
     }
 
@@ -540,14 +540,14 @@ const distributeInventoryItem = (req, res) => {
         return res.status(500).json({
           code: GENERAL_ERROR_CODES.DATABASE_ERROR,
           message: GENERAL_ERROR_MESSAGES.DATABASE_ERROR,
-          error: err.message
+          error: err.message,
         });
       }
 
       if (!item) {
         return res.status(404).json({
           code: ORG_ERROR_CODES.INVENTORY_ITEM_NOT_FOUND,
-          message: ORG_ERROR_MESSAGES.ORG_INVENTORY_ITEM_NOT_FOUND
+          message: ORG_ERROR_MESSAGES.ORG_INVENTORY_ITEM_NOT_FOUND,
         });
       }
 
@@ -555,13 +555,14 @@ const distributeInventoryItem = (req, res) => {
       const impact = calculateSustainabilityImpact(item.category, 1);
 
       // deactivate item after distribution
-      const deactivateQuery = "UPDATE INVENTORY SET is_active = 0 WHERE inv_id = ?";
+      const deactivateQuery =
+        "UPDATE INVENTORY SET is_active = 0 WHERE inv_id = ?";
       db.run(deactivateQuery, [inv_id], function (err) {
         if (err) {
           return res.status(500).json({
             code: ORG_ERROR_CODES.FAILED_TO_UPDATE_INVENTORY,
             message: ORG_ERROR_MESSAGES.ORG_FAILED_TO_UPDATE_INVENTORY,
-            error: err.message
+            error: err.message,
           });
         }
 
@@ -582,14 +583,14 @@ const distributeInventoryItem = (req, res) => {
             staff_id,
             impact.co2_saved,
             impact.landfill_saved,
-            impact.beneficiaries
+            impact.beneficiaries,
           ],
           function (err) {
             if (err) {
               return res.status(500).json({
                 code: ORG_ERROR_CODES.FAILED_TO_INSERT_DISTRIBUTION,
                 message: ORG_ERROR_MESSAGES.ORG_FAILED_TO_INSERT_DISTRIBUTION,
-                error: err.message
+                error: err.message,
               });
             }
 
@@ -601,11 +602,32 @@ const distributeInventoryItem = (req, res) => {
 
               db.get(donorQuery, [item.transaction_id], (err, donorRow) => {
                 if (!err && donorRow) {
-                  sendDonorNotification( // send in app notification
+                  const notifyTitle = "Your donation was distributed";
+                  const notifyMessage = `Your donated item "${item.item_name}" has been distributed to: ${beneficiary_group}`;
+
+                  // send in app notification
+                  sendDonorNotification(
                     donorRow.donor_id,
-                    'Your donation was distributed',
-                    `Your donated item "${item.item_name}" has been distributed to: ${beneficiary_group}`
+                    notifyTitle,
+                    notifyMessage
                   );
+
+                  // get donor email and send email notification
+                  const emailQuery = "SELECT email FROM USER WHERE user_id = ?";
+
+                  db.get(emailQuery, [donorRow.donor_id], (err, userRow) => {
+                    if (!err && userRow && userRow.email) {
+                      try {
+                        sendEmail(
+                          userRow.email,
+                          "Your donation has been distributed!",
+                          notifyMessage
+                        );
+                      } catch (e) {
+                        console.error("Email failed:", e.message);
+                      }
+                    }
+                  });
                 }
               });
             }
@@ -613,7 +635,7 @@ const distributeInventoryItem = (req, res) => {
             return res.status(200).json({
               code: ORG_SUCCESS_CODES.INVENTORY_ITEM_DISTRIBUTED,
               message: ORG_SUCCESS_MESSAGES.ORG_INVENTORY_ITEM_DISTRIBUTED,
-              distribution_id
+              distribution_id,
             });
           }
         );

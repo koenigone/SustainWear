@@ -7,6 +7,7 @@ import ManageUsers from "./manageUsers";
 import ManageOrganisations from "./manageOrganisations";
 import ManageReports from "./manageReports";
 import AdminLog from "./adminLog";
+import Settings from "../../settings";
 
 // react icons
 import { IoPieChartSharp } from "react-icons/io5";
@@ -14,6 +15,7 @@ import { FaUsers } from "react-icons/fa";
 import { FaHandsHelping } from "react-icons/fa";
 import { BiSolidReport } from "react-icons/bi";
 import { FaList } from "react-icons/fa";
+import { FaGear } from "react-icons/fa6";
 
 export default function AdminDashboard() {
   const tabs = [
@@ -71,6 +73,17 @@ export default function AdminDashboard() {
         </HStack>
       ),
       component: <AdminLog />,
+    },
+    {
+      label: "Settings",
+      descriptiveTitle: "Account Settings",
+      customLabel: (
+        <HStack spacing={2}>
+          <FaGear size="18" color="#38A169" />
+          <span>Settings</span>
+        </HStack>
+      ),
+      component: <Settings />,
     },
   ];
 

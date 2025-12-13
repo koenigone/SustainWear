@@ -41,7 +41,11 @@ export default function DashboardLayout({ tabs }) {
             }}
           >
             {tabs.map((tab, index) => (
-              <Tab key={index} fontSize={{ base: "sm", md: "md" }}>
+              <Tab
+                key={index}
+                fontSize={{ base: "sm", md: "md" }}
+                aria-label={tab.label}
+              >
                 <Box
                   sx={{ "& span": { display: { base: "none", md: "inline" } } }}
                 >

@@ -940,7 +940,7 @@ const exportReportPdf = async (req, res) => {
     }
 
     // USER ACTIVITY
-    sectionHeader("USER ACTIVITY – STAFF");
+    sectionHeader("USER ACTIVITY and STAFF");
 
     if (reportData.userActivity.staff.length === 0) {
       writeText("No staff activity recorded.");
@@ -950,7 +950,7 @@ const exportReportPdf = async (req, res) => {
       });
     }
 
-    sectionHeader("USER ACTIVITY – DONORS");
+    sectionHeader("USER ACTIVITY and DONORS");
 
     if (reportData.userActivity.donors.length === 0) {
       writeText("No donor activity recorded.");

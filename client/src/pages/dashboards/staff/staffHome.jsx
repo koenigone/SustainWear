@@ -83,7 +83,7 @@ export default function OrgHome() {
   }
 
   return (
-    <Box>
+    <Box as="main">
       {/* SUMMARY CARDS */}
       <SimpleGrid columns={[1, 2, 4]} spacing={6} mb={8}>
         <StatCard label="Pending Requests" value={summary.pending_requests} />
@@ -123,7 +123,7 @@ function StatCard({ label, value }) {
       border="1px solid"
       borderColor="gray.200"
     >
-      <Text fontSize="sm" color="gray.500" mb={1}>
+      <Text fontSize="sm" color="gray.700" mb={1}>
         {label}
       </Text>
       <Text fontSize="2xl" fontWeight="700" color="brand.green">

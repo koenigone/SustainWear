@@ -50,7 +50,7 @@ export default function RadialLandfillGauge({ data, loading }) {
       <Text mt={-3} fontWeight="700" color="brand.green" fontSize="lg">
         {percent.toFixed(1)}%
       </Text>
-      <Text fontSize="sm" color="gray.500">
+      <Text fontSize="sm" color="gray.700">
         of landfill goal reached
       </Text>
     </ChartCard>

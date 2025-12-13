@@ -25,7 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axiosClient";
 import { useAuth } from "../../../auth/authContext";
 import toast from "react-hot-toast";
-import InventoryItemModal from "../../../components/modals/staff/donationReviewModal";
+import InventoryItemModal from "../../../components/modals/staff/inventoryItemDetailsModal";
 
 export default function UpdateStock() {
   const { organisation } = useAuth();
@@ -319,17 +319,15 @@ export default function UpdateStock() {
       )}
 
       {/* ITEM PREVIEW MODAL*/}
-      {selectedItem && (
-        <InventoryItemModal
-          isOpen={isOpen}
-          onClose={onClose}
-          item={selectedItem}
-          beneficiary={beneficiary}
-          setBeneficiary={setBeneficiary}
-          distributing={distributing}
-          handleDistribute={handleDistribute}
-        />
-      )}
+      <InventoryItemModal
+        isOpen={isOpen}
+        onClose={onClose}
+        item={selectedItem}
+        beneficiary={beneficiary}
+        setBeneficiary={setBeneficiary}
+        distributing={distributing}
+        handleDistribute={handleDistribute}
+      />
     </Box>
   );
 }

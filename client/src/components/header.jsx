@@ -71,9 +71,7 @@ export default function Header() {
           <Text fontWeight="bold" fontSize="lg">
             {user.first_name}
           </Text>
-          <Text fontSize="sm" opacity="60%">
-            {user.email}
-          </Text>
+          <Text fontSize="sm">{user.email}</Text>
         </Box>
       </Flex>
 
@@ -102,7 +100,8 @@ export default function Header() {
         <Menu>
           <MenuButton
             as={IconButton}
-            icon={<BsThreeDotsVertical />}
+            icon={<BsThreeDotsVertical aria-hidden="true" />}
+            aria-label="Account options"
             variant="ghost"
             color="green.600"
             fontSize="22px"

@@ -34,7 +34,7 @@ export default function RecentActivity({ data }) {
         }}
       >
         {(!data || data.length === 0) && (
-          <Text color="gray.500" textAlign="center">
+          <Text color="gray.700" textAlign="center">
             No recent activity yet.
           </Text>
         )}
@@ -56,7 +56,7 @@ export default function RecentActivity({ data }) {
                 {entry.item_name}
               </Text>
 
-              <Text fontSize="xs" color="gray.500">
+              <Text fontSize="xs" color="gray.700">
                 {new Date(entry.timestamp).toLocaleString()}
               </Text>
 
@@ -67,7 +67,7 @@ export default function RecentActivity({ data }) {
               )}
 
               {entry.action_type === "Declined" && (
-                <Text fontSize="sm" color="red.500">
+                <Text fontSize="sm" color="red.700">
                   Reason: {entry.details}
                 </Text>
               )}

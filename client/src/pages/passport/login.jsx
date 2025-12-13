@@ -78,7 +78,7 @@ export default function Login() {
   const isFormInvalid = !form.email || !form.password;
 
   return (
-    <Center minH="100vh" bg="brand.beige">
+    <Center minH="100vh" as="main" bg="brand.beige">
       <Box bg="brand.green" p={10} rounded="md" color="white" w="sm">
         <Heading size="lg" textAlign="center" mb={4}>
           Login
@@ -134,7 +134,6 @@ export default function Login() {
 
             <Flex direction="column" align="center" fontSize="sm" gap={2}>
               <Link
-                opacity="80%"
                 onClick={passwordModal.onOpen}
                 textDecor="underline"
               >
@@ -142,7 +141,6 @@ export default function Login() {
               </Link>
 
               <Link
-                opacity="80%"
                 as={RouterLink}
                 to="/register"
                 textDecor="underline"

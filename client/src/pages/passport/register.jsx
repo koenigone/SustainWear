@@ -69,7 +69,7 @@ export default function Register() {
     !form.confirmPassword;
 
   return (
-    <Center minH="100vh" bg="brand.beige">
+    <Center minH="100vh" as="main" bg="brand.beige">
       <Box bg="brand.green" p={10} rounded="md" color="white" w="sm">
         <Heading size="lg" textAlign="center" mb={4}>
           Create Your Account
@@ -154,7 +154,7 @@ export default function Register() {
           </Button>
 
           <Box>
-            <Text opacity="80%">
+            <Text>
               Already a user?{" "}
               <Link as={RouterLink} to="/login" textDecor="underline">
                 Login
