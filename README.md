@@ -72,22 +72,37 @@ Built using **React**, **Express.js**, and **SQLite**, SustainWear supports thre
 
 ---
 
-### Fully Responsive
+## Fully Responsive Design
 
-### Designed with all screen sizes in mind
+SustainWear was built using a **mobile-first design approach**, ensuring the platform is accessible, readable, and easy to use across all device types. Rather than shrinking a desktop interface, layouts progressively enhance as screen size increases.
 
-* Mobile
-* Tablet
-* Desktop
+### Responsive Behaviour by Device
 
-**Submit Donation Tab on Mobile**
-![Mobile](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+- **Mobile Devices**
+  - Card-based layouts optimised for touch interaction
+  - Condensed views that prioritise essential information
+  - Actions remain accessible without horizontal scrolling
 
-**Admin's Manage Users Tab on Mobile Devices**
-![Mobile](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+- **Tablet Devices**
+  - Expanded layouts that reveal additional contextual data
+  - Improved information density while maintaining clarity
+  - Interfaces adapt naturally to wider viewports
 
-**Admin's Manage Organisations Tab on Tablet Devices**
-![Tablet](https://github.com/user-attachments/assets/05c6bc2b-6dd3-4b75-8441-f537beedd271)
+- **Desktop Devices**
+  - Full administrative views with complete datasets
+  - Higher data density to support efficient management workflows
+  - Clear visual hierarchy for extended use
+
+### Responsive Interface Examples
+
+**Submit Donation - Mobile View**  
+![Mobile Donation](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+
+**Admin - Manage Users (Mobile View)**  
+![Mobile Manage Users](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+
+**Admin - Manage Organisations (Tablet View)**  
+![Tablet Manage Organisations](https://github.com/user-attachments/assets/05c6bc2b-6dd3-4b75-8441-f537beedd271)
 
 ---
 
