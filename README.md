@@ -72,6 +72,40 @@ Built using **React**, **Express.js**, and **SQLite**, SustainWear supports thre
 
 ---
 
+## Fully Responsive Design
+
+SustainWear was built using a **mobile-first design approach**, ensuring the platform is accessible, readable, and easy to use across all device types. Rather than shrinking a desktop interface, layouts progressively enhance as screen size increases.
+
+### Responsive Behaviour by Device
+
+- **Mobile Devices**
+  - Card-based layouts optimised for touch interaction
+  - Condensed views that prioritise essential information
+  - Actions remain accessible without horizontal scrolling
+
+- **Tablet Devices**
+  - Expanded layouts that reveal additional contextual data
+  - Improved information density while maintaining clarity
+  - Interfaces adapt naturally to wider viewports
+
+- **Desktop Devices**
+  - Full administrative views with complete datasets
+  - Higher data density to support efficient management workflows
+  - Clear visual hierarchy for extended use
+
+### Responsive Interface Examples
+
+**Submit Donation - Mobile View**  
+![Mobile Donation](https://github.com/user-attachments/assets/d669b175-5063-4c41-aec1-ac4822c827ae)
+
+**Admin - Manage Users (Mobile View)**  
+![Mobile Manage Users](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+
+**Admin - Manage Organisations (Tablet View)**  
+![Tablet Manage Organisations](https://github.com/user-attachments/assets/05c6bc2b-6dd3-4b75-8441-f537beedd271)
+
+---
+
 ## Tech Stack
 
 ### Frontend
@@ -169,7 +203,7 @@ The frontend runs on `http://localhost:5173` and the backend API on `http://loca
   └─ Express backend (controllers, routes, middleware, services, database)
 
 /Docs
-  └─ Supporting documentation (defect reports, diagrams)
+  └─ Supporting documentation (defect reports)
 ```
 
 This separation ensures maintainability, scalability, and clear responsibility between frontend and backend layers.
