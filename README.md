@@ -148,48 +148,58 @@ SustainWear was built using a **mobile-first design approach**, ensuring the pla
 
 ### Prerequisites
 
-* Node.js (v18 or later)
-* npm
-* Git
+SustainWear requires the following tools to be installed:
 
-### Installation
+- Node.js (v18 or later)
+- npm
+- Git
 
-1. Clone the repository:
+### Installation and Running the Application
 
-```bash
-git clone https://github.com/koenigone/SustainWear.git
-```
+Clone the repository:
 
-2. Install backend dependencies:
+    git clone https://github.com/koenigone/SustainWear.git
 
-```bash
-cd server
-npm install
-```
+Install backend dependencies:
 
-3. Install frontend dependencies:
+    cd server
+    npm install
 
-```bash
-cd ../client
-npm install
-```
+Install frontend dependencies:
 
-4. Configure environment variables:
-   Create a `.env` file inside the `server` directory and define required variables (variables included in the .env template).
+    cd ../client
+    npm install
 
-5. Run the application:
+Configure environment variables:
 
-```bash
-# Start backend
-cd server
-npm run dev
+Create a `.env` file inside the `server` directory and define the required variables using the provided `.env` template.
 
-# Start frontend
-cd client
-npm run dev
-```
+### Running the Application
 
-The frontend runs on `http://localhost:5173` and the backend API on `http://localhost:5000`.
+The application can be run in both development mode and production preview mode.
+
+Development Mode:
+
+    # Start backend
+    cd server
+    npm run dev
+
+    # Start frontend
+    cd ../client
+    npm run dev
+
+Production Preview Mode (Optimised Build):
+
+    # Build the frontend
+    cd client
+    npm run build
+
+    # Run production preview
+    npm run preview
+
+The frontend runs on http://localhost:5173 and the backend API runs on http://localhost:5000.
+
+Production preview mode reflects real deployment behaviour and was used for performance, accessibility, and Lighthouse testing.
 
 ---
 
@@ -200,7 +210,7 @@ The frontend runs on `http://localhost:5173` and the backend API on `http://loca
   └─ React frontend (pages, components, contexts, API clients, UI logic)
 
 /server
-  └─ Express backend (controllers, routes, middleware, services, database)
+  └─ Express backend (controllers, routes, middleware, services, tests, database)
 
 /Docs
   └─ Supporting documentation (defect reports)
