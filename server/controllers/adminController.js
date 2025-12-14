@@ -1,7 +1,7 @@
 const db = require("../config/db");
 const { logAdminAction } = require("../helpers/logAdminAction");
 const { validateOrganisationInput } = require("../helpers/inputValidations");
-const { generateReportData } = require("../helpers/adminReportService");
+const { generateReportData } = require("../services/adminReportService");
 const { PDFDocument, StandardFonts } = require("pdf-lib");
 
 const {
