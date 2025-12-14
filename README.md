@@ -1,105 +1,192 @@
-<h1><strong>SustainWear</strong></h1>
+# **SustainWear**
+
 A Smart Clothing Donation & Sustainability Management Platform
 
-SustainWear is a full-stack web application designed to modernise and streamline clothing donations between donors, charity organisations, and administrators.
-The platform promotes sustainability by tracking environmental impact, simplifying donation workflows, and empowering organisations with actionable analytics.
+---
 
-Built with React, Express.js, and SQLite, SustainWear provides a seamless experience for all user roles-Donor, Staff, and Admin-each equipped with tailored dashboards and tools.
-Features include real-time notifications, AI-powered item descriptions, sustainability metrics, admin reporting tools, and complete activity logs.
+## Project Overview
 
+SustainWear is a full-stack web application designed to modernise and streamline clothing donations between donors, charity organisations, and administrators. The platform promotes sustainability by simplifying donation workflows, tracking environmental impact, and providing organisations with actionable insights through role-based dashboards.
 
-<strong>Donor Dashboard</strong>
-<img width="2557" height="1323" alt="image" src="https://github.com/user-attachments/assets/19e4f17d-bdee-49a0-9fef-c10e015e6bc3" />
+Built using **React**, **Express.js**, and **SQLite**, SustainWear supports three core user roles, **Donor**, **Organisation Staff**, and **Admin**, each with dedicated tools and interfaces tailored to their responsibilities. Key features include real-time notifications, sustainability metrics, AI-assisted donation descriptions, reporting tools, and complete audit logs.
 
-<strong>Staff Dashboard</strong>
-<img width="2411" height="1267" alt="image" src="https://github.com/user-attachments/assets/c8e0ac31-b669-4d69-add1-d301cd1728a4" />
+---
 
-<strong>Admin Dashboard</strong>
-<img width="2554" height="1313" alt="image" src="https://github.com/user-attachments/assets/ac6c0f1b-a660-4e04-b9fb-02debfb7d8b8" />
+## Dashboards
 
-<strong>Features Overview</strong>
+### Donor Dashboard
 
-<strong>Donor Features:</strong>
+![Donor Dashboard](https://github.com/user-attachments/assets/19e4f17d-bdee-49a0-9fef-c10e015e6bc3)
 
-Submit clothing donations with AI-generated item descriptions
+### Staff Dashboard
 
-Track donation history and status updates
+![Staff Dashboard](https://github.com/user-attachments/assets/c8e0ac31-b669-4d69-add1-d301cd1728a4)
 
-View sustainability contribution metrics
+### Admin Dashboard
 
-Compete on the Donor Leaderboard
+![Admin Dashboard](https://github.com/user-attachments/assets/ac6c0f1b-a660-4e04-b9fb-02debfb7d8b8)
 
-Receive real-time notifications
+---
 
-AI-Powered Donation Form
-<img src="https://github.com/user-attachments/assets/e373dd1f-4797-4765-be79-736c734ea9cc" width="100%" />
+## Features Overview
 
-Donor Leaderboard
-<img src="https://github.com/user-attachments/assets/e4734b26-87f9-4cc6-88ec-349735efef99" width="100%" />
+### Donor Features
 
-<strong>Staff Features</strong>
+* Submit clothing donations with optional AI-generated descriptions
+* Upload multiple images per donation
+* Track donation history and status updates
+* View sustainability impact metrics (e.g. CO₂ saved, landfill reduction)
+* Compete on the Donor Leaderboard
+* Receive real-time in-app and email notifications
 
-Review and process incoming donations
+**AI-Powered Donation Form**
+![AI Donation Form](https://github.com/user-attachments/assets/e373dd1f-4797-4765-be79-736c734ea9cc)
 
-Manage distribution records
+**Donor Leaderboard**
+![Donor Leaderboard](https://github.com/user-attachments/assets/e4734b26-87f9-4cc6-88ec-349735efef99)
 
-View sustainability metrics for their organisation
+---
 
-Access internal dashboards
+### Organisation Staff Features
 
+* Review and process incoming donations
+* Approve, decline, or cancel donation requests
+* Update inventory stock levels
+* Monitor donation distribution records
+* View organisation-level sustainability metrics
 
-<strong>Admin Features:</strong>
+---
 
-Manage organisations and staff accounts
+### Admin Features
 
-Full system-wide dashboards and KPIs
+* Manage users, organisations, and staff accounts
+* Access system-wide dashboards and KPIs
+* Generate detailed reports with date-range filtering
+* Review complete audit logs of admin actions
 
-Generate detailed reports with date-range filtering
+**Admin Report Generation**
+![Admin Reports](https://github.com/user-attachments/assets/b285d812-42c8-4964-9360-746e9da5afaa)
 
-Review complete audit logs of admin actions
+**Admin Action Logs**
+![Admin Logs](https://github.com/user-attachments/assets/36ab80a6-cc0a-4a40-ba76-72be24c136a7)
 
-Admin Report Generation
-<img src="https://github.com/user-attachments/assets/b285d812-42c8-4964-9360-746e9da5afaa" width="100%" />
+---
 
-Admin Action Logs
-<img src="https://github.com/user-attachments/assets/36ab80a6-cc0a-4a40-ba76-72be24c136a7" width="100%" />
+## Tech Stack
 
+### Frontend
 
-<h1><strong>Tech Stach:</strong></h1>
+* React.js (Vite)
+* Chakra UI
+* Axios
+* Context API (Authentication & Notifications)
 
-<strong>Frontend</strong>
+### Backend
 
-React.js
+* Node.js / Express.js
+* JWT Authentication
+* Role-Based Access Control (RBAC)
+* AI Description Service (OpenAI-powered)
+* Email Services (password reset & notifications)
 
-Chakra UI
+### Database
 
-Axios
+* SQLite (lightweight, file-based relational database)
 
-Context API (Authentication & Notifications)
+---
 
-<strong>Back-end</strong>
-
-Node.js / Express.js
-
-JWT Authentication
-
-Role-based Access Control
-
-AI Description Service (OpenAI-powered)
-
-Email Services (password reset & notifications)
-
-Database
-
-SQLite (Lightweight, file-based relational database)
+## Role Capabilities
 
 | Feature                     | Donor | Staff | Admin |
-| --------------------------- | ----- | ----- | ----- |
-| Submit Donations            | ✔️    | –     | –     |
-| AI Item Description         | ✔️    | –     | –     |
-| Track Sustainability Impact | ✔️    | ✔️    | ✔️    |
-| Manage Incoming Donations   | –     | ✔️    | –     |
-| Organisation Management     | –     | –     | ✔️    |
-| Staff Management            | –     | –     | ✔️    |
-| System Reports              | –     | –     | ✔️    |
-| Action Logging              | –     | –     | ✔️    |
+| --------------------------- | :---: | :---: | :---: |
+| Submit Donations            |   ✔️  |   –   |   –   |
+| AI Item Description         |   ✔️  |   –   |   –   |
+| Track Sustainability Impact |   ✔️  |   ✔️  |   ✔️  |
+| Manage Incoming Donations   |   –   |   ✔️  |   –   |
+| Organisation Management     |   –   |   –   |   ✔️  |
+| Staff Management            |   –   |   –   |   ✔️  |
+| System Reports              |   –   |   –   |   ✔️  |
+| Action Logging              |   –   |   –   |   ✔️  |
+
+---
+
+## Project Setup
+
+### Prerequisites
+
+* Node.js (v18 or later)
+* npm
+* Git
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/koenigone/SustainWear.git
+```
+
+2. Install backend dependencies:
+
+```bash
+cd server
+npm install
+```
+
+3. Install frontend dependencies:
+
+```bash
+cd ../client
+npm install
+```
+
+4. Configure environment variables:
+   Create a `.env` file inside the `server` directory and define required variables (variables included in the .env template).
+
+5. Run the application:
+
+```bash
+# Start backend
+cd server
+npm run dev
+
+# Start frontend
+cd client
+npm run dev
+```
+
+The frontend runs on `http://localhost:5173` and the backend API on `http://localhost:5000`.
+
+---
+
+## Repository Structure
+
+```
+/client
+  └─ React frontend (pages, components, contexts, API clients, UI logic)
+
+/server
+  └─ Express backend (controllers, routes, middleware, services, database)
+
+/Docs
+  └─ Supporting documentation (defect reports, diagrams)
+```
+
+This separation ensures maintainability, scalability, and clear responsibility between frontend and backend layers.
+
+---
+
+## Usage Overview
+
+* **Donors** can register, submit donations with images, track their donation status, and view personal sustainability impact.
+* **Organisation Staff** can review and process donations, update inventory, and monitor distribution activity.
+* **Admins** can manage users and organisations, view system-wide analytics, generate reports, and audit administrative actions.
+
+All features are protected using role-based authentication and authorisation.
+
+---
+
+## Additional Notes
+
+* This repository contains the **working prototype** of SustainWear.
+* Detailed design decisions, Agile process evidence, testing strategy, and reflections are documented in the **project portfolio and presentation**, not in this README.
