@@ -96,7 +96,7 @@ SustainWear was built using a **mobile-first design approach**, ensuring the pla
 ### Responsive Interface Examples
 
 **Submit Donation - Mobile View**  
-![Mobile Donation](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+![Mobile Donation](https://github.com/user-attachments/assets/d669b175-5063-4c41-aec1-ac4822c827ae)
 
 **Admin - Manage Users (Mobile View)**  
 ![Mobile Manage Users](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
