@@ -72,6 +72,25 @@ Built using **React**, **Express.js**, and **SQLite**, SustainWear supports thre
 
 ---
 
+### Fully Responsive
+
+### Designed with all screen sizes in mind
+
+* Mobile
+* Tablet
+* Desktop
+
+**Submit Donation Tab on Mobile**
+![Mobile](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+
+**Admin's Manage Users Tab on Mobile Devices**
+![Mobile](https://github.com/user-attachments/assets/d26f2fe1-ca3e-4297-9ef8-6038f44bc6f8)
+
+**Admin's Manage Organisations Tab on Tablet Devices**
+![Tablet](https://github.com/user-attachments/assets/05c6bc2b-6dd3-4b75-8441-f537beedd271)
+
+---
+
 ## Tech Stack
 
 ### Frontend
