@@ -7,12 +7,24 @@ const { verifyToken, verifyAdmin } = require("./middlewares/middlewares");
 const app = express();
 
 // CORS configuration for development and production
+const allowedOrigins = [
+  process.env.FRONTEND_DEV_URL,        // http://localhost:5173
+  process.env.FRONTEND_DEPLOYMENT_URL, // http://localhost:4173
+];
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? true
-    : process.env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 };
+
 app.use(cors(corsOptions));
 
 // middlewares
