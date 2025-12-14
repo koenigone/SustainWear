@@ -203,7 +203,7 @@ The frontend runs on `http://localhost:5173` and the backend API on `http://loca
   └─ Express backend (controllers, routes, middleware, services, database)
 
 /Docs
-  └─ Supporting documentation (defect reports, diagrams)
+  └─ Supporting documentation (defect reports)
 ```
 
 This separation ensures maintainability, scalability, and clear responsibility between frontend and backend layers.
