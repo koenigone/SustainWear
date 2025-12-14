@@ -190,10 +190,3 @@ All features are protected using role-based authentication and authorisation.
 
 * This repository contains the **working prototype** of SustainWear.
 * Detailed design decisions, Agile process evidence, testing strategy, and reflections are documented in the **project portfolio and presentation**, not in this README.
-
----
-
-## Links
-
-* GitHub Repository: [https://github.com/koenigone/SustainWear](https://github.com/koenigone/SustainWear)
-* Demo Video: [https://youtu.be/qdxEaTcqqPQ?si=iHDcut3biIFCP6GR](https://youtu.be/qdxEaTcqqPQ?si=iHDcut3biIFCP6GR)
