@@ -7,7 +7,7 @@ const { verifyToken, upload } = require("../middlewares/middlewares");
 router.post("/donations/request", verifyToken, upload.array("photos", 4), donorController.submitDonationRequest);
 
 // notification routes
-router.get("/notifications", verifyToken, donorController.getDonorNotifications);
+router.get("/notifications", verifyToken, donorController.getDonorNotifications); // notifications
 router.put("/notifications/:notification_id/read", verifyToken, donorController.markNotificationRead);
 router.put("/notifications/read-all", verifyToken, donorController.markAllRead);
 router.post("/generate-description", verifyToken, donorController.generateDonationDescription);
