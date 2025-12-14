@@ -141,7 +141,7 @@ npm install
 ```
 
 4. Configure environment variables:
-   Create a `.env` file inside the `server` directory and define required variables (e.g. JWT secret, email service credentials, AI API key).
+   Create a `.env` file inside the `server` directory and define required variables (variables included in the .env template).
 
 5. Run the application:
 
