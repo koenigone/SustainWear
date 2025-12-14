@@ -1,4 +1,3 @@
-// Fetch the history of an organisation including staff status change to donations, distributions
 import {
   Box,
   Button,
@@ -106,7 +105,7 @@ const StaffHistory = () => {
           const action = `Donation - ${status ?? 'Unknown'}`;
           const staffMember = histories.organisation.find((s) => d.handled_by_staff_id === s.staff_id);
           const staffName = staffMember?.staff_name ?? 'Unknown';
-          const staffNameFull = `${staffName}[${staffId}]`;
+          const staffNameFull = `${staffName}`;
 
           const timeToHandle = new Date(handledAt).getTime() - new Date(submittedAt).getTime();
 
@@ -143,7 +142,7 @@ const StaffHistory = () => {
             staff_role: staffRole,
           } = o ?? null;
 
-          const staffNameFull = `${staffName}[${staffId}]`;
+          const staffNameFull = `${staffName}`;
 
           const rowStaffAdd = [
             assignedAt,
@@ -177,7 +176,7 @@ const StaffHistory = () => {
         } = d;
 
         const action = `Distributed - ${beneficiaryGroup ?? 'Unknown'}`;
-        const staffNameFull = `${staffName}[${staffId}]`;
+        const staffNameFull = `${staffName}`;
 
         const row = [
           distributedAt,
@@ -377,7 +376,9 @@ const StaffHistory = () => {
                 <Thead>
                   <Tr>
                     {headers.map((header, i) => (
-                      <Th key={i}>{header}</Th>
+                      <Th key={i} display={i === 3 ? { base: 'none', md: 'table-cell' } : 'table-cell'}>
+                        {header}
+                      </Th>
                     ))}
                   </Tr>
                 </Thead>
@@ -385,7 +386,7 @@ const StaffHistory = () => {
                   {filteredRows.map((row, rI) => (
                     <Tr key={rI}>
                       {row.map((cell, cI) => (
-                        <Td key={cI} whiteSpace={'pre-line'}>
+                        <Td key={cI} whiteSpace={'pre-line'} display={cI === 3 ? { base: 'none', md: 'table-cell' } : 'table-cell'}>
                           {isNaN(new Date(cell)) ? cell : TimeFormatter.dateToFormat(new Date(cell))}
                         </Td>
                       ))}

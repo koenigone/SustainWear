@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import {
   Box,
-  Table,
-  Thead,
-  Tbody,
-  VStack,
-  Tr,
-  Th,
-  Td,
+  SimpleGrid,
+  Stack,
+  Text,
+  Heading,
+  Badge,
   Button,
   Input,
   HStack,
   Spinner,
   useDisclosure,
+  Divider,
 } from "@chakra-ui/react";
 
 import api from "../../../api/axiosClient";
@@ -29,7 +28,6 @@ export default function ManageOrganisations() {
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
-
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [staffList, setStaffList] = useState([]);
 
@@ -52,7 +50,7 @@ export default function ManageOrganisations() {
 
   const [newOrg, setNewOrg] = useState(initialOrgData);
 
-  // fetch all organisations
+  // fetch organisations
   const fetchOrganisations = async () => {
     try {
       const res = await api.get("/admin/organisations");
@@ -65,12 +63,11 @@ export default function ManageOrganisations() {
     }
   };
 
-  // initial fetch
   useEffect(() => {
     fetchOrganisations();
   }, []);
 
-  // filter search
+  // search
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     setFilteredOrgs(
@@ -83,22 +80,18 @@ export default function ManageOrganisations() {
     );
   }, [searchTerm, orgs]);
 
-  // create new organisation
+  // create org
   const handleOrgCreate = async () => {
     const validation = validateOrganisationForm(newOrg);
-
     if (!validation.valid) {
-      setOrgError(validation.message); // show error inside modal
+      setOrgError(validation.message);
       return;
     }
 
-    setOrgError(""); // clear errors
+    setOrgError("");
     try {
       await api.post("/admin/organisations", newOrg);
-      toast.success("Organisation added successfully", {
-        position: "bottom-center",
-      });
-
+      toast.success("Organisation added successfully");
       addModal.onClose();
       fetchOrganisations();
       setNewOrg(initialOrgData);
@@ -111,13 +104,12 @@ export default function ManageOrganisations() {
     }
   };
 
-  // open toggle confirmation
+  // toggle org
   const confirmOrgToggle = (org) => {
     setOrgToToggle(org);
     toggleModal.onOpen();
   };
 
-  // activate/deactivate organisation
   const handleOrgToggleActive = async () => {
     if (!orgToToggle) return;
     setIsProcessing(true);
@@ -144,137 +136,95 @@ export default function ManageOrganisations() {
     }
   };
 
-  // open manage staff modal
+  // manage staff
   const openStaffModal = async (org) => {
     setSelectedOrg(org);
     staffModal.onOpen();
-
     const res = await api.get(`/admin/org/${org.org_id}/staff`);
     setStaffList(res.data);
-  };
-
-  const refreshStaff = async (orgId) => {
-    const res = await api.get(`/admin/org/${orgId}/staff`);
-    setStaffList(res.data);
-  };
-
-  // hire staff
-  const assignStaffByEmail = async (email) => {
-    if (!email.trim()) {
-      toast.error("Please enter an email");
-      return false;
-    }
-
-    try {
-      await api.post(`/admin/org/${selectedOrg.org_id}/staff`, { email });
-
-      toast.success("Staff member added");
-      await refreshStaff(selectedOrg.org_id);
-
-      // refresh staff
-      const res = await api.get(`/admin/org/${selectedOrg.org_id}/staff`);
-      setStaffList(res.data);
-
-      return true; // success
-    } catch (err) {
-      toast.error(err.response?.data?.errMessage || "Failed to add staff");
-      return false;
-    }
-  };
-
-  // remove staff
-  const removeStaff = async (staff) => {
-    await api.delete(`/admin/org/${selectedOrg.org_id}/staff/${staff.user_id}`);
-    setStaffList((prev) => prev.filter((s) => s.user_id !== staff.user_id));
   };
 
   if (loading) return <Spinner size="xl" />;
 
   return (
-    <Box p={6} bg="white" rounded="lg" boxShadow="md">
-      <HStack justify="space-between" mb={4}>
+    <Box p={{ base: 4, md: 6 }} bg="white" rounded="lg" boxShadow="md">
+      <HStack justify="space-between" mb={4} flexWrap="wrap" gap={3}>
         <Input
-          placeholder="Search by name, city, or email..."
+          placeholder="Search organisations..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          bg="gray.50"
-          borderColor="gray.300"
+          maxW="400px"
         />
         <Button colorScheme="green" onClick={addModal.onOpen}>
           Add Organisation
         </Button>
       </HStack>
 
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Name</Th>
-            <Th>Description</Th>
-            <Th>Address</Th>
-            <Th>Contact Email</Th>
-            <Th>Status</Th>
-            <Th>Created</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
+      {filteredOrgs.length === 0 ? (
+        <Text color="gray.500">No organisations found</Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 1 }} spacing={4}>
+          {filteredOrgs.map((org) => (
+            <Box
+              key={org.org_id}
+              borderWidth="1px"
+              borderRadius="lg"
+              p={4}
+              _hover={{ boxShadow: "md" }}
+            >
+              <Stack spacing={3}>
+                {/* Header */}
+                <HStack justify="space-between">
+                  <Heading size="sm">{org.name}</Heading>
+                  <Badge colorScheme={org.is_active ? "green" : "red"}>
+                    {org.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </HStack>
 
-        <Tbody>
-          {filteredOrgs.length === 0 ? (
-            <Tr>
-              <Td colSpan={7} textAlign="center" color="gray.500">
-                No organisations found
-              </Td>
-            </Tr>
-          ) : (
-            filteredOrgs.map((org) => (
-              <Tr key={org.org_id}>
-                <Td>{org.name}</Td>
-
-                <Td maxW="300px" whiteSpace="normal" wordBreak="break-word">
+                {/* Meta */}
+                <Text fontSize="sm" color="gray.600">
                   {org.description}
-                </Td>
+                </Text>
 
-                <Td>
-                  {org.street_name}, {org.post_code}, {org.city}
-                </Td>
+                <Divider />
 
-                <Td>{org.contact_email}</Td>
+                <Stack spacing={1} fontSize="sm">
+                  <Text>
+                    <strong>Address:</strong> {org.street_name},{" "}
+                    {org.post_code}, {org.city}
+                  </Text>
+                  <Text>
+                    <strong>Email:</strong> {org.contact_email}
+                  </Text>
+                  <Text>
+                    <strong>Created:</strong>{" "}
+                    {new Date(org.created_at).toLocaleDateString()}
+                  </Text>
+                </Stack>
 
-                <Td
-                  color={org.is_active ? "green.500" : "red.500"}
-                  fontWeight="bold"
-                >
-                  {org.is_active ? "Active" : "Inactive"}
-                </Td>
+                {/* Actions */}
+                <HStack pt={2} spacing={3} flexWrap="wrap">
+                  <Button
+                    size="sm"
+                    colorScheme="orange"
+                    onClick={() => openStaffModal(org)}
+                  >
+                    Manage Staff
+                  </Button>
 
-                <Td>{new Date(org.created_at).toLocaleDateString()}</Td>
-
-                <Td>
-                  <VStack spacing={2} justify="center" align="center">
-                    <Button
-                      size="sm"
-                      w="120px"
-                      colorScheme="orange"
-                      onClick={() => openStaffModal(org)}
-                    >
-                      Manage Staff
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      w="120px"
-                      colorScheme={org.is_active ? "yellow" : "green"}
-                      onClick={() => confirmOrgToggle(org)}
-                    >
-                      {org.is_active ? "Deactivate" : "Activate"}
-                    </Button>
-                  </VStack>
-                </Td>
-              </Tr>
-            ))
-          )}
-        </Tbody>
-      </Table>
+                  <Button
+                    size="sm"
+                    colorScheme={org.is_active ? "yellow" : "green"}
+                    onClick={() => confirmOrgToggle(org)}
+                  >
+                    {org.is_active ? "Deactivate" : "Activate"}
+                  </Button>
+                </HStack>
+              </Stack>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
 
       {/* ADD ORG */}
       <AddOrgModal
@@ -292,8 +242,6 @@ export default function ManageOrganisations() {
         onClose={staffModal.onClose}
         selectedOrg={selectedOrg}
         staffList={staffList}
-        removeStaff={removeStaff}
-        assignByEmail={assignStaffByEmail}
       />
 
       {/* TOGGLE ORG */}

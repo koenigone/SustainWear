@@ -1,20 +1,17 @@
 import { useEffect, useState } from "react";
 import {
   Box,
-  Table,
-  Thead,
-  Tbody,
-  Flex,
-  Tr,
-  Th,
-  Td,
-  Button,
+  SimpleGrid,
+  Stack,
+  Text,
+  Heading,
   Badge,
-  Spinner,
-  HStack,
+  Button,
   Input,
+  HStack,
+  Spinner,
   useDisclosure,
-  TableContainer,
+  Divider,
 } from "@chakra-ui/react";
 import api from "../../../api/axiosClient";
 import toast from "react-hot-toast";
@@ -24,10 +21,12 @@ export default function ManageUsers() {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [actionType, setActionType] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
   const confirmModal = useDisclosure();
 
   // fetch users
@@ -55,21 +54,7 @@ export default function ManageUsers() {
     );
   }, [searchTerm, users]);
 
-  // update user data
-  const handleUpdate = async (user_id, role, is_active) => {
-    try {
-      await api.put("/admin/users", { user_id, role, is_active });
-      toast.success("User updated successfully");
-      setUsers((prev) =>
-        prev.map((u) => (u.user_id === user_id ? { ...u, role, is_active } : u))
-      );
-    } catch (err) {
-      const msg = err.response?.data?.errMessage;
-      toast.error(msg);
-    }
-  };
-
-  // open modal for confirmation
+  // open modal
   const openModal = (user, type) => {
     setSelectedUser(user);
     setActionType(type);
@@ -105,18 +90,10 @@ export default function ManageUsers() {
         )
       );
 
-      toast.success(
-        actionType === "promote"
-          ? "User promoted to Admin successfully"
-          : newStatus
-          ? "User activated successfully"
-          : "User deactivated successfully"
-      );
-
+      toast.success("User updated successfully");
       confirmModal.onClose();
     } catch (err) {
-      const msg = err.response?.data?.errMessage || "Failed to update user";
-      toast.error(msg);
+      toast.error(err.response?.data?.errMessage || "Failed to update user");
     } finally {
       setIsProcessing(false);
     }
@@ -125,115 +102,91 @@ export default function ManageUsers() {
   if (loading) return <Spinner size="xl" />;
 
   return (
-    <Box p={6} bg="white" rounded="lg" boxShadow="md">
+    <Box p={{ base: 4, md: 6 }} bg="white" rounded="lg" boxShadow="md">
       <Input
         placeholder="Search by name or email..."
-        _placeholder={{ color: "gray.400" }}
         mb={4}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        bg="gray.50"
-        borderColor="gray.300"
+        maxW="400px"
       />
 
-      <TableContainer overflowX={"auto"}>
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Full Name</Th>
-              <Th>Email</Th>
-              <Th>Role</Th>
-              <Th>Status</Th>
-              <Th>Actions</Th>
-            </Tr>
-          </Thead>
-          <Tbody color="grey">
-            {filteredUsers.length === 0 ? (
-              <Tr>
-                <Td colSpan={6} textAlign="center" color="gray.500">
-                  No users found
-                </Td>
-              </Tr>
-            ) : (
-              filteredUsers.map((user) => (
-                <Tr key={user.user_id}>
-                  <Td>
+      {filteredUsers.length === 0 ? (
+        <Text color="gray.500">No users found</Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 1 }} spacing={4}>
+          {filteredUsers.map((user) => (
+            <Box
+              key={user.user_id}
+              borderWidth="1px"
+              borderRadius="lg"
+              p={4}
+              _hover={{ boxShadow: "md" }}
+            >
+              <Stack spacing={3}>
+                {/* Header */}
+                <HStack justify="space-between">
+                  <Heading size="sm">
                     {user.first_name} {user.last_name}
-                  </Td>
-                  <Td>{user.email}</Td>
-                  <Td>
-                    <Flex justify="center" align="center" width="100%">
-                      <Badge
-                        colorScheme={user.role === "Admin" ? "blue" : "gray"}
-                        px={2}
-                        py={1}
-                        borderRadius="md"
-                      >
-                        {user.role}
-                      </Badge>
-                    </Flex>
-                  </Td>
-                  <Td>
-                    <Flex justify="center" align="center" width="100%">
-                      <Badge
-                        colorScheme={user.is_active ? "green" : "red"}
-                        px={3}
-                        py={1}
-                        borderRadius="md"
-                        textAlign="center"
-                        minW="80px"
-                      >
-                        {user.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </Flex>
-                  </Td>
-                  <Td width="250px">
-                    {user.role !== "Admin" ? (
-                      <HStack spacing={2}>
-                        <Button
-                          size="sm"
-                          width="60%"
-                          colorScheme="blue"
-                          onClick={() => openModal(user, "promote")}
-                        >
-                          Promote to Admin
-                        </Button>
+                  </Heading>
 
-                        <Button
-                          size="sm"
-                          width="40%"
-                          colorScheme={user.is_active ? "yellow" : "green"}
-                          onClick={() =>
-                            user.is_active
-                              ? openModal(user, "deactivate")
-                              : handleUpdate(user.user_id, user.role, true)
-                          }
-                        >
-                          {user.is_active ? "Deactivate" : "Activate"}
-                        </Button>
-                      </HStack>
-                    ) : (
-                      <Flex justify="center" width="240px">
-                        <Badge
-                          colorScheme="gray"
-                          w="100%"
-                          textAlign="center"
-                          py={1}
-                          borderRadius="md"
-                        >
-                          Already Admin
-                        </Badge>
-                      </Flex>
-                    )}
-                  </Td>
-                </Tr>
-              ))
-            )}
-          </Tbody>
-        </Table>
-      </TableContainer>
+                  <Badge colorScheme={user.is_active ? "green" : "red"}>
+                    {user.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </HStack>
 
-      {/* CONFIRM TOGGLE USER MODAL */}
+                {/* Meta */}
+                <Text fontSize="sm" color="gray.600">
+                  {user.email}
+                </Text>
+
+                <Divider />
+
+                <HStack>
+                  <Text fontSize="sm">
+                    <strong>Role:</strong>
+                  </Text>
+                  <Badge colorScheme={user.role === "Admin" ? "blue" : "gray"}>
+                    {user.role}
+                  </Badge>
+                </HStack>
+
+                {/* Actions */}
+                <HStack pt={2} spacing={3} flexWrap="wrap">
+                  {user.role !== "Admin" ? (
+                    <>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={() => openModal(user, "promote")}
+                      >
+                        Promote to Admin
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        colorScheme={user.is_active ? "yellow" : "green"}
+                        onClick={() =>
+                          openModal(
+                            user,
+                            user.is_active ? "deactivate" : "activate"
+                          )
+                        }
+                      >
+                        {user.is_active ? "Deactivate" : "Activate"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Badge>Already Admin</Badge>
+                  )}
+                </HStack>
+              </Stack>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
+
+      {/* CONFIRM MODAL */}
       <ConfirmToggleUserModal
         isOpen={confirmModal.isOpen}
         onClose={confirmModal.onClose}
