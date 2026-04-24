@@ -29,7 +29,7 @@ export default function Landing() {
           boxShadow="xl"
         >
           <Heading fontSize={["2xl", "3xl", "4xl"]} mb={4}>
-            SustainWear Logo
+            SustainWear
           </Heading>
           <Text fontSize={["md", "lg"]} opacity={0.9}>
             "Smart Donation for Smart Sustainable Future"
