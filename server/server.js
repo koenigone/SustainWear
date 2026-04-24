@@ -55,7 +55,8 @@ process.on("unhandledRejection", (reason, promise) => {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) => {
+  // Express 5 requires a named wildcard for SPA catch-all routes.
+  app.get("/{*path}", (req, res) => {
     res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
   });
 }
