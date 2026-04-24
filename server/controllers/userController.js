@@ -29,6 +29,9 @@ const { sendDonorNotification } = require("../helpers/donorNotifications");
 const { getStaffOrganisation } = require("./orgController"); // to show staff's org info on login
 const twoFactor = {}; // store 2FA code in memory
 
+const isEmailServiceConfigured = () =>
+  Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
 // --------------------------------------------------------
 // REGISTER
 // --------------------------------------------------------
@@ -253,11 +256,28 @@ const login = (req, res) => {
         expires,
       };
 
-      await sendTwoFactorsMail( // send email with 2fa code
-        user.email,
-        "Your 2FA Verification Code",
-        `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`
-      );
+      if (!isEmailServiceConfigured()) {
+        delete twoFactor[tempToken];
+        return res.status(503).json({
+          code: USER_ERROR_CODES.EMAIL_SEND_FAILED,
+          message: "Login is temporarily unavailable because the email service is not configured.",
+        });
+      }
+
+      try {
+        await sendTwoFactorsMail( // send email with 2fa code
+          user.email,
+          "Your 2FA Verification Code",
+          `Your verification code is ${twoFactorCode}. It expires in 5 minutes.`
+        );
+      } catch (mailErr) {
+        delete twoFactor[tempToken];
+        console.error("Failed to send 2FA email during login:", mailErr);
+        return res.status(503).json({
+          code: USER_ERROR_CODES.EMAIL_SEND_FAILED,
+          message: "Unable to send the verification code email right now. Please try again later.",
+        });
+      }
 
       return res.status(200).json({
         message: "2FA code sent",
@@ -373,11 +393,26 @@ const resendTwoFactors = (req, res) => {
         });
       }
 
-      await sendTwoFactorsMail( // send new 2fa via email
-        user.email,
-        "Your new verification code",
-        `Your new verification code is ${newCode}. It expires in 5 minutes.`
-      );
+      if (!isEmailServiceConfigured()) {
+        return res.status(503).json({
+          code: USER_ERROR_CODES.EMAIL_SEND_FAILED,
+          message: "The email service is not configured.",
+        });
+      }
+
+      try {
+        await sendTwoFactorsMail( // send new 2fa via email
+          user.email,
+          "Your new verification code",
+          `Your new verification code is ${newCode}. It expires in 5 minutes.`
+        );
+      } catch (mailErr) {
+        console.error("Failed to resend 2FA email:", mailErr);
+        return res.status(503).json({
+          code: USER_ERROR_CODES.EMAIL_SEND_FAILED,
+          message: "Unable to resend the verification code right now. Please try again later.",
+        });
+      }
 
       return res.status(200).json({
         message: "New code sent successfully",
