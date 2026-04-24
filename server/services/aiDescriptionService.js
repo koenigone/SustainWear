@@ -1,8 +1,20 @@
 const OpenAI = require("openai");
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+let client;
+
+const getClient = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured");
+  }
+
+  if (!client) {
+    client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return client;
+};
 
 const generateItemDescription = async (data) => {
   const { item_name, category, item_condition, size, gender } = data;
@@ -20,7 +32,7 @@ const generateItemDescription = async (data) => {
   Do NOT use emojis. Keep it under 60 words.
   `;
 
-  const response = await client.responses.create({
+  const response = await getClient().responses.create({
     model: "gpt-5-mini",
     input: prompt,
   });

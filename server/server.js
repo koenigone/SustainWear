@@ -11,6 +11,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.FRONTEND_DEV_URL,
   process.env.FRONTEND_DEPLOYMENT_URL,
+  process.env.BACKEND_URL,
   ...(process.env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim()),
@@ -29,17 +30,18 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(cors(corsOptions));
-
 // middlewares
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
+// Only apply CORS to API requests so same-origin static assets can always load.
+app.use("/api", cors(corsOptions));
+
 // routes
 app.use("/api", require("./routes/userRoutes"));        // authentication routes
 app.use("/api/donor", require("./routes/donorRoutes")); // donor specific routes
-app.use("/uploads", express.static("uploads"));         // serve static files from uploads folder
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // serve static files from uploads folder
 app.use("/api/orgs", require("./routes/orgRoutes"));    // organisation specific routes
 app.use("/api/admin", verifyToken, verifyAdmin, require("./routes/adminRoutes")); // admin specific routes
 
