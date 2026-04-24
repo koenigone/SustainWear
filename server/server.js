@@ -8,15 +8,19 @@ const app = express();
 
 // CORS configuration for development and production
 const allowedOrigins = [
-  process.env.FRONTEND_DEV_URL,        // http://localhost:5173
-  process.env.FRONTEND_DEPLOYMENT_URL, // http://localhost:4173
-];
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_DEV_URL,
+  process.env.FRONTEND_DEPLOYMENT_URL,
+  ...(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim()),
+].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -57,7 +61,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // port
-const port = process.env.PORT;
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

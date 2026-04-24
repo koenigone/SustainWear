@@ -6,7 +6,9 @@ import axios from "axios";
   Use it instead of regular axios, do not modify it
 */
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  // Use a relative API path by default so the deployed frontend can talk to
+  // the same Render service that serves it.
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
 });
 

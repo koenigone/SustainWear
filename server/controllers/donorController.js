@@ -154,8 +154,9 @@ const getDonationHistory = (req, res) => {
         photos = [];
       }
 
+      const backend = process.env.BACKEND_URL || "";
       const fullUrls = photos.map((url) =>
-        isURL(url) ? url : `${process.env.BACKEND_URL}${url}`
+        isURL(url) ? url : `${backend}${url}`
       );
 
       return {
